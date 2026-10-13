@@ -27,10 +27,11 @@ ap.add_argument("--max_steps", type=int, default=-1, help="stop after N steps (s
 a = ap.parse_args()
 
 gpu = torch.cuda.is_available()
-bf16 = gpu and torch.cuda.is_bf16_supported()   # a Colab T4 has no bf16, so it falls back to fp16
+cap = torch.cuda.get_device_capability()[0] if gpu else 0
+bf16 = gpu and cap >= 8   # real bf16 needs an Ampere-or-newer GPU. A T4 (7.5) only emulates it (is_bf16_supported() says True) and TRL's loss kernel then fails, so a T4 uses fp16
 fp16 = gpu and not bf16
 dtype = torch.bfloat16 if bf16 else (torch.float16 if fp16 else torch.float32)   # no GPU (smoke tests only): plain float32
-print("gpu:", gpu, "| dtype:", dtype)
+print("gpu:", gpu, "| " + (torch.cuda.get_device_name(0) + " | " if gpu else "") + "dtype:", dtype)
 tok = AutoTokenizer.from_pretrained(a.base)
 if tok.pad_token is None:
     tok.pad_token = tok.eos_token
