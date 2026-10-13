@@ -1,0 +1,102 @@
+  B.route('PATCH', '/spends/:id', async (c) => {
+    const r = ownSpend(c), p = c.body || {}, patch = {};
+    if (p.amount_paise !== undefined) { if (!Number.isInteger(p.amount_paise) || p.amount_paise <= 0) throw E.invalid('Amount must be more than zero.'); patch.amount_paise = p.amount_paise; }
+    if (p.category !== undefined) { if (!B.catsOf(c.uid).some(x => x.slug === p.category)) throw E.invalid('Pick one of your categories.'); patch.category = p.category; }
+    if (p.account_id !== undefined) { if (!B.accountsOf(c.uid).some(a => a.id === p.account_id)) throw E.invalid('Pick one of your accounts.'); patch.account_id = p.account_id; }
+    if (p.note !== undefined) patch.note = String(p.note).slice(0, 60);
+    if (p.memo !== undefined) patch.memo = String(p.memo).slice(0, 140);
+    if (p.spent_at !== undefined) { if (Date.parse(p.spent_at) > now() + 3600000) throw E.invalid('That date is in the future.'); patch.spent_at = p.spent_at; }
+    return { spend: B.spendView(db.update('spend', r, patch), c.user.timezone) };
+  });
+
+  // ---------- income ----------
+  B.addIncome = (uid, p) => {
+    if (p.idempotency_key) { const dup = db.find('income', r => r.user_id === uid && r.idempotency_key === p.idempotency_key); if (dup) return { income: dup, duplicate: true }; }
+    if (!Number.isInteger(p.amount_paise) || p.amount_paise <= 0 || p.amount_paise > 1e11) throw E.invalid('Amount must be more than zero.');
+    const accs = B.accountsOf(uid); if (p.account_id && !accs.some(a => a.id === p.account_id)) throw E.invalid('Pick one of your accounts.');
+    const at = p.received_at || iso(); if (Date.parse(at) > now() + 3600000) throw E.invalid('That date is in the future.');
+    return { income: db.insert('income', { user_id: uid, amount_paise: p.amount_paise, title: String(p.title || 'Income').slice(0, 60), memo: String(p.memo || '').slice(0, 140), account_id: p.account_id || accs[0].id, received_at: at, idempotency_key: p.idempotency_key || null, created_at: iso(), deleted_at: null }), duplicate: false };
+  };
+  const incView = (r, tz) => ({ id: r.id, amount_paise: r.amount_paise, title: r.title, memo: r.memo || '', account_id: r.account_id, received_at: r.received_at, day: dayKey(Date.parse(r.received_at), tz) });
+  const ownIncome = (c) => { const r = db.find('income', x => x.id === c.params.id && x.user_id === c.uid && !x.deleted_at); if (!r) throw E.notFound('Income not found.'); return r; };
+  B.route('POST', '/income', async (c) => {
+    const b = c.body || {}; const key = c.headers['Idempotency-Key'] || c.headers['idempotency-key']; if (!key) throw E.invalid('Idempotency-Key header is required.');
+    const r = B.addIncome(c.uid, { amount_paise: b.amount_paise, title: b.title, memo: b.memo, account_id: b.account_id, received_at: b.received_at, idempotency_key: key });
+    const aunty = (!r.duplicate && b.react !== false && B.auntyReactIncome) ? B.auntyReactIncome(c.uid, r.income) : null;
+    return [r.duplicate ? 200 : 201, { income: incView(r.income, c.user.timezone), duplicate: r.duplicate, aunty }];
+  });
+  B.route('GET', '/income', async (c) => ({ income: db.where('income', r => r.user_id === c.uid && !r.deleted_at).map(r => incView(r, c.user.timezone)).filter(r => (!c.query.from || r.day >= c.query.from) && (!c.query.to || r.day <= c.query.to)).sort((a, b) => b.received_at.localeCompare(a.received_at)) }));
+  B.route('PATCH', '/income/:id', async (c) => {
+    const r = ownIncome(c), p = c.body || {}, patch = {};
+    if (p.amount_paise !== undefined) { if (!Number.isInteger(p.amount_paise) || p.amount_paise <= 0) throw E.invalid('Amount must be more than zero.'); patch.amount_paise = p.amount_paise; }
+    if (p.title !== undefined) patch.title = String(p.title).slice(0, 60);
+    if (p.memo !== undefined) patch.memo = String(p.memo).slice(0, 140);
+    if (p.account_id !== undefined) { if (!B.accountsOf(c.uid).some(a => a.id === p.account_id)) throw E.invalid('Pick one of your accounts.'); patch.account_id = p.account_id; }
+    if (p.received_at !== undefined) patch.received_at = p.received_at;
+    return { income: incView(db.update('income', r, patch), c.user.timezone) };
+  });
+  B.route('DELETE', '/income/:id', async (c) => { db.update('income', ownIncome(c), { deleted_at: iso() }); return { ok: true }; });
+
+  // ---------- ledger: every income and expense in a range, newest first ----------
+  B.ledger = (uid, from, to) => {
+    const u = B.userById(uid), tz = u.timezone, accs = Object.fromEntries(db.where('account', r => r.user_id === uid).map(a => [a.id, a])), cats = Object.fromEntries(B.catsOf(uid).map(x => [x.slug, x]));
+    const out = [];
+    B.rawSpends(uid).forEach(r => { const ms = Date.parse(r.spent_at), day = dayKey(ms, tz); if (day >= from && day <= to) out.push({ id: r.id, kind: 'expense', amount_paise: r.amount_paise, title: r.note || (cats[r.category] ? cats[r.category].label : r.category), category: r.category, category_label: cats[r.category] ? cats[r.category].label : r.category, icon: cats[r.category] ? cats[r.category].icon : '🧾', memo: r.memo || '', account_id: r.account_id || null, account_name: accs[r.account_id] ? accs[r.account_id].name : '', at: r.spent_at, day, hm: hmOf(ms, tz) }); });
+    db.where('income', r => r.user_id === uid && !r.deleted_at).forEach(r => { const ms = Date.parse(r.received_at), day = dayKey(ms, tz); if (day >= from && day <= to) out.push({ id: r.id, kind: 'income', amount_paise: r.amount_paise, title: r.title, category: 'income', category_label: 'Income', icon: '💰', memo: r.memo || '', account_id: r.account_id, account_name: accs[r.account_id] ? accs[r.account_id].name : '', at: r.received_at, day, hm: hmOf(ms, tz) }); });
+    out.sort((a, b) => b.at.localeCompare(a.at));
+    const exp = out.filter(x => x.kind === 'expense').reduce((a, x) => a + x.amount_paise, 0), inc = out.filter(x => x.kind === 'income').reduce((a, x) => a + x.amount_paise, 0);
+    return { from, to, entries: out, income_paise: inc, expense_paise: exp, net_paise: inc - exp };
+  };
+  B.route('GET', '/ledger', async (c) => {
+    const q = c.query; if (!/^\d{4}-\d{2}-\d{2}$/.test(q.from || '') || !/^\d{4}-\d{2}-\d{2}$/.test(q.to || '')) throw E.invalid('from and to must be dates.');
+    return B.ledger(c.uid, q.from, q.to);
+  });
+
+  // ---------- categories with monthly limits ----------
+  const catView = (r, month, uid) => ({ slug: r.slug, label: r.label, icon: r.icon, custom: !!r.custom, limit_paise: r.limit_paise, month, spent_paise: month ? B.monthSpent(uid, month, r.slug) : null });
+  B.route('GET', '/categories', async (c) => { const m = /^\d{4}-\d{2}$/.test(c.query.month || '') ? c.query.month : B.today(c.user).slice(0, 7); return { month: m, categories: B.catsOf(c.uid).map(r => catView(r, m, c.uid)) }; });
+  B.route('POST', '/categories', async (c) => {
+    const b = c.body || {}, label = String(b.label || '').trim(); if (!label || label.length > 24) throw E.invalid('Give the category a short name.');
+    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cat';
+    if (B.catsOf(c.uid).some(x => x.slug === slug || x.label.toLowerCase() === label.toLowerCase())) throw E.conflict('You already have that category.');
+    if (b.limit_paise != null && (!Number.isInteger(b.limit_paise) || b.limit_paise < 0)) throw E.invalid('Limit must be a positive amount.');
+    return [201, { category: catView(db.insert('category', { user_id: c.uid, slug, label, icon: String(b.icon || '🏷️').slice(0, 4), limit_paise: b.limit_paise == null ? null : b.limit_paise, custom: true, created_at: iso() }), null, c.uid) }];
+  });
+  B.route('PATCH', '/categories/:slug', async (c) => {
+    const r = B.catsOf(c.uid).find(x => x.slug === c.params.slug); if (!r) throw E.notFound('Category not found.'); const b = c.body || {}, patch = {};
+    if (b.limit_paise !== undefined) { if (b.limit_paise !== null && (!Number.isInteger(b.limit_paise) || b.limit_paise < 0)) throw E.invalid('Limit must be a positive amount.'); patch.limit_paise = b.limit_paise; }
+    if (b.label !== undefined) { if (!String(b.label).trim() || String(b.label).length > 24) throw E.invalid('Give the category a short name.'); patch.label = String(b.label).trim(); }
+    if (b.icon !== undefined) patch.icon = String(b.icon).slice(0, 4);
+    return { category: catView(db.update('category', r, patch), null, c.uid) };
+  });
+  B.route('DELETE', '/categories/:slug', async (c) => {
+    const r = B.catsOf(c.uid).find(x => x.slug === c.params.slug); if (!r) throw E.notFound('Category not found.'); if (!r.custom) throw E.conflict('Built-in categories cannot be deleted.');
+    db.where('spend', s => s.user_id === c.uid && s.category === r.slug).forEach(s => db.update('spend', s, { category: 'other' })); db.remove('category', x => x.id === r.id); return { ok: true, moved_to: 'other' };
+  });
+
+  // ---------- accounts (bank, cash, wallet, card) ----------
+  const accView = (a, uid) => ({ id: a.id, name: a.name, type: a.type, icon: a.icon, opening_paise: a.opening_paise, balance_paise: B.accountBalance(uid, a) });
+  B.route('GET', '/accounts', async (c) => { const accs = B.accountsOf(c.uid).map(a => accView(a, c.uid)); return { accounts: accs, total_paise: accs.reduce((s, a) => s + a.balance_paise, 0) }; });
+  B.route('POST', '/accounts', async (c) => {
+    const b = c.body || {}, name = String(b.name || '').trim(); if (!name || name.length > 30) throw E.invalid('Give the account a short name.');
+    if (B.accountsOf(c.uid).some(a => a.name.toLowerCase() === name.toLowerCase())) throw E.conflict('You already have an account with that name.');
+    if (b.opening_paise != null && !Number.isInteger(b.opening_paise)) throw E.invalid('Opening balance must be an amount.');
+    const type = ['bank', 'cash', 'wallet', 'card'].includes(b.type) ? b.type : 'bank'; const icon = { bank: '🏦', cash: '💵', wallet: '👛', card: '💳' }[type];
+    return [201, { account: accView(db.insert('account', { user_id: c.uid, name, type, icon: b.icon || icon, opening_paise: b.opening_paise || 0, archived_at: null, created_at: iso() }), c.uid) }];
+  });
+  const ownAcc = (c) => { const a = db.find('account', x => x.id === c.params.id && x.user_id === c.uid && !x.archived_at); if (!a) throw E.notFound('Account not found.'); return a; };
+  B.route('PATCH', '/accounts/:id', async (c) => {
+    const a = ownAcc(c), b = c.body || {}, patch = {};
+    if (b.name !== undefined) { if (!String(b.name).trim() || String(b.name).length > 30) throw E.invalid('Give the account a short name.'); patch.name = String(b.name).trim(); }
+    if (b.opening_paise !== undefined) { if (!Number.isInteger(b.opening_paise)) throw E.invalid('Opening balance must be an amount.'); patch.opening_paise = b.opening_paise; }
+    if (b.type !== undefined && ['bank', 'cash', 'wallet', 'card'].includes(b.type)) patch.type = b.type;
+    return { account: accView(db.update('account', a, patch), c.uid) };
+  });
+  B.route('DELETE', '/accounts/:id', async (c) => {
+    const a = ownAcc(c); const accs = B.accountsOf(c.uid); if (accs.length < 2) throw E.conflict('Keep at least one account.');
+    const target = accs.find(x => x.id !== a.id), first = accs[0];
+    db.where('spend', s => s.user_id === c.uid && (s.account_id || first.id) === a.id).forEach(s => db.update('spend', s, { account_id: target.id }));
+    db.where('income', s => s.user_id === c.uid && (s.account_id || first.id) === a.id).forEach(s => db.update('income', s, { account_id: target.id }));
+    db.update('account', target, { opening_paise: target.opening_paise + a.opening_paise });
+    db.update('account', a, { archived_at: iso() }); return { ok: true, moved_to: target.name };
+  });

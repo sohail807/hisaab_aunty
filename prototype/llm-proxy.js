@@ -23,7 +23,8 @@ http.createServer(async (req, res) => {
     if (busy >= MAX_CONCURRENT) return send(res, 429, { error: { message: 'The language model is busy. Try again in a moment.' } }, origin);
     let raw = ''; for await (const c of req) { raw += c; if (raw.length > 64 * 1024) return send(res, 413, { error: { message: 'Request too large.' } }, origin); }
     let body; try { body = JSON.parse(raw); } catch (e) { return send(res, 400, { error: { message: 'Bad JSON.' } }, origin); }
-    body.stream = false; body.max_tokens = Math.min(+body.max_tokens || MAX_TOKENS, MAX_TOKENS); if (MODEL) body.model = MODEL; if (!body.model) delete body.model;
+    body.stream = false; if (process.env.LLM_THINKING !== '1') body.chat_template_kwargs = { enable_thinking: false };   // Qwen3.x "thinking" is far too slow on CPU; set LLM_THINKING=1 to allow it
+body.max_tokens = Math.min(+body.max_tokens || MAX_TOKENS, MAX_TOKENS); if (MODEL) body.model = MODEL; if (!body.model) delete body.model;
     busy++; const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), TIMEOUT);
     try {
       const up = await fetch(BASE + '/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + KEY }, body: JSON.stringify(body), signal: ctl.signal });
