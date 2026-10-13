@@ -402,7 +402,7 @@ function guessCat(text) {
   for (const [c, words] of CAT_WORDS) if (new RegExp('\\b(?:' + words + ')\\b', 'i').test(text)) return c;
   return 'other';
 }
-const FILLER = /\b(spent|spend|paid|pay|gave|give|sent|send|bought|buy|for|on|to|ko|rs|rupees|rupee|inr|just|only|a|an|the|my|me|i|ka|ki|ke|kal|aaj|yesterday|today|parso|of|at|from|last|ago|please|pls)\b|₹/ig;
+const FILLER = /\b(spent|spend|paid|pay|gave|give|sent|send|bought|buy|for|on|to|ko|rs|rupees|rupee|inr|just|only|a|an|the|my|me|i|ka|ki|ke|kal|aaj|yesterday|today|parso|of|at|from|last|ago|please|pls|diye|diya|dediye|dedo|de|gaye|gaya|gayi|gya|lag|lage|laga|udaye|udaya|kharch|kiya|kiye|hua|hue|dala|daala|liya|liye|mein|pe|par|se|ne|tha|thi|hai|phook|yaar|bhai|plz|aunty|na)\b|₹/ig;
 function noteFrom(seg) {
   let t = seg.replace(AMT_RE, ' ').replace(FILLER, ' ').replace(/\b(mon|tues?|wed(nes)?|thu(rs)?|fri|sat(ur)?|sun)(day)?\b/ig, ' ');
   t = t.replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ').trim();
@@ -1586,7 +1586,15 @@ function installAunty(B) {
   }
 
   // ---------- the mock "model": decides which tools to call ----------
-  function planPlan(msg, c, turn) {
+  // chatty filler around a message ("yaar", "plz", "aunty") must never become the item name or hide the real words
+  const LEAD_FILL = /^(yaar|yar|bhai|bro|aunty|auntie|sun|suno|arre|arey|hey|oye)\b[\s,!.]*/i, TRAIL_FILL = /[\s,!.]*\b(yaar|yar|bhai|bro|please|plz|pls|na|jaldi|ji|aunty|auntie)[\s!.?]*$/i;
+  function stripFiller(msg) {
+    let m = String(msg).trim();
+    for (let i = 0; i < 4; i++) { const n = m.replace(LEAD_FILL, '').replace(TRAIL_FILL, m.endsWith('?') ? '?' : ''); if (n === m || !n.replace(/[?!.,\s]/g, '')) break; m = n.trim(); }
+    return m || String(msg).trim();
+  }
+  function planPlan(msg0, c, turn) {
+    const msg = stripFiller(msg0);
     const t = msg.toLowerCase().trim(), today = c.today;
     const customs = B.catsOf(c.user.id).filter(x => x.custom);
     const MC = (s) => MATCH_CAT(s) || (customs.find(x => new RegExp('\\b' + x.label.toLowerCase().replace(/[^a-z0-9 ]/g, '') + '\\b').test(s.toLowerCase())) || {}).slug || null;
@@ -1686,6 +1694,7 @@ function installAunty(B) {
     switch (o.intent) {
       case 'log_spend': {
         const list = Array.isArray(o.spends) ? o.spends.slice(0, 5) : []; if (!list.length) return bad('no spends in the proposal');
+        if (!noteFrom(stripFiller(msg)) && digits.length === 1) return P('slm_ask', { question: `What was the ₹${digits[0]} for?` });   // an amount with no item ("yaar 200 diye") is a question, never a save
         const calls = []; let unconfirmed = null;
         for (const s of list) {
           const amt = num(s && s.amount_inr); if (!(amt > 0 && amt <= 1e7)) return bad('bad amount in the proposal');
@@ -2315,9 +2324,10 @@ async function runBackendTests() {
       add(SL, 'validator: notes are stripped of markup and instructions-looking symbols', V({ intent: 'log_spend', spends: [{ amount_inr: 90, category: 'ride', note: '<b>alert(1)</b> auto' }] }, 'auto 90').plan.calls[0].input.note === 'balert1b auto');
       add(SL, 'validator: unknown categories fall back to other; future dates are dropped', V({ intent: 'log_spend', spends: [{ amount_inr: 90, category: 'gold bars', when: '2099-01-01' }] }, 'x 90').plan.calls[0].input.category === 'other' && !('when' in V({ intent: 'log_spend', spends: [{ amount_inr: 90, category: 'ride', when: '2099-01-01' }] }, 'x 90').plan.calls[0].input));
       add(SL, 'validator: read-only intents map to the right tools', V({ intent: 'status', period: 'month' }).plan.calls[0].input.period === 'month' && V({ intent: 'query', mode: 'biggest', period: 'this week' }).plan.calls[0].name === 'query_spends' && V({ intent: 'goal_info' }).plan.calls[0].name === 'get_goal_details' && V({ intent: 'accounts' }).plan.calls[0].name === 'get_accounts');
-      add(SL, 'validator: at most five spends and no spends at all are handled', V({ intent: 'log_spend', spends: [] }).ok === false && V({ intent: 'log_spend', spends: Array.from({ length: 9 }, () => ({ amount_inr: 10, category: 'chai' })) }, '10').plan.calls.length === 5);
+      add(SL, 'validator: at most five spends and no spends at all are handled', V({ intent: 'log_spend', spends: [] }).ok === false && V({ intent: 'log_spend', spends: Array.from({ length: 9 }, () => ({ amount_inr: 10, category: 'chai' })) }, 'chai 10').plan.calls.length === 5);
       add(SL, 'validator: an amount sent as text ("450.0") is accepted when the digits are in the message', V({ intent: 'log_spend', spends: [{ amount_inr: '450.0', category: 'food', note: 'zomato' }] }, 'zomato pe 450').plan.calls[0].input.amount_inr === 450);
       add(SL, 'validator: a purchase check with an amount the user never typed is rejected', V({ intent: 'check_purchase', amount_inr: 20, label: 'chai' }, 'aaj chai pe kitna gaya').ok === false && V({ intent: 'check_purchase', amount_inr: 2000, label: 'shoes' }, 'shoes 2k lena hai').ok === true);
+      add(SL, 'validator: an amount with no item ("yaar 200 diye") becomes a question even if the model proposes a spend', V({ intent: 'log_spend', spends: [{ amount_inr: 200, category: 'other', note: 'diye' }] }, 'yaar 200 diye').plan.kind === 'slm_ask' && V({ intent: 'log_spend', spends: [{ amount_inr: 200, category: 'chai', note: 'chai' }] }, 'chai 200').plan.kind === 'log');
       add(SL, 'validator: a clarifying question must be present', V({ intent: 'ask', question: '' }).ok === false && V({ intent: 'ask', question: 'What was it for?' }).plan.kind === 'slm_ask'); }
   }
 
@@ -2340,6 +2350,9 @@ async function runBackendTests() {
     x = await chat(B, s, 'pichle mahine se kitna kam kharch hua'); add(EV, 'Hinglish compare with months: compare_periods', names(x).join() === 'compare_periods');
     x = await chat(B, s, 'how am i doing'); add(EV, 'how am i doing: get_summary', x.tools[0].name === 'get_summary');
     x = await chat(B, s, 'oops, undo that'); add(EV, 'oops, undo that: undo_last_spend', names(x).join() === 'undo_last_spend' && x.tools[0].result.undone);
+    { const n0 = B.rawSpends(s.uid).length; x = await chat(B, s, 'yaar 200 diye'); add(EV, 'filler words never become the item: "yaar 200 diye" asks what it was for and saves nothing', nTools(x) === 0 && /what was the ₹200 for/i.test(x.b.replies[0].text) && B.rawSpends(s.uid).length === n0, x.b.replies[0].text);
+      x = await chat(B, s, 'yaar gave 1500 plz'); add(EV, '"yaar gave 1500 plz" asks what it was for and saves nothing', nTools(x) === 0 && B.rawSpends(s.uid).length === n0, x.b.replies[0].text);
+      x = await chat(B, s, 'bhai chai 30 yaar'); add(EV, '"bhai chai 30 yaar" still logs chai 30', x.tools[0] && x.tools[0].name === 'log_spend' && x.tools[0].input.amount_inr === 30 && x.tools[0].input.category === 'chai'); }
     x = await chat(B, s, 'paid Rohan'); add(EV, 'paid Rohan: no tool, asks the amount', nTools(x) === 0 && /how much/i.test(x.b.replies[0].text));
     x = await chat(B, s, 'gave 500'); add(EV, 'gave 500: no tool, asks what it was for', nTools(x) === 0 && /what was the ₹500 for/i.test(x.b.replies[0].text), x.b.replies[0].text);
     x = await chat(B, s, 'gave 500 to Rohan'); add(EV, 'gave 500 to Rohan: asks one short question instead of guessing', nTools(x) === 0 && /\?/.test(x.b.replies[0].text), x.b.replies[0].text);

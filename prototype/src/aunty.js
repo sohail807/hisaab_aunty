@@ -254,7 +254,15 @@ function installAunty(B) {
   }
 
   // ---------- the mock "model": decides which tools to call ----------
-  function planPlan(msg, c, turn) {
+  // chatty filler around a message ("yaar", "plz", "aunty") must never become the item name or hide the real words
+  const LEAD_FILL = /^(yaar|yar|bhai|bro|aunty|auntie|sun|suno|arre|arey|hey|oye)\b[\s,!.]*/i, TRAIL_FILL = /[\s,!.]*\b(yaar|yar|bhai|bro|please|plz|pls|na|jaldi|ji|aunty|auntie)[\s!.?]*$/i;
+  function stripFiller(msg) {
+    let m = String(msg).trim();
+    for (let i = 0; i < 4; i++) { const n = m.replace(LEAD_FILL, '').replace(TRAIL_FILL, m.endsWith('?') ? '?' : ''); if (n === m || !n.replace(/[?!.,\s]/g, '')) break; m = n.trim(); }
+    return m || String(msg).trim();
+  }
+  function planPlan(msg0, c, turn) {
+    const msg = stripFiller(msg0);
     const t = msg.toLowerCase().trim(), today = c.today;
     const customs = B.catsOf(c.user.id).filter(x => x.custom);
     const MC = (s) => MATCH_CAT(s) || (customs.find(x => new RegExp('\\b' + x.label.toLowerCase().replace(/[^a-z0-9 ]/g, '') + '\\b').test(s.toLowerCase())) || {}).slug || null;
@@ -354,6 +362,7 @@ function installAunty(B) {
     switch (o.intent) {
       case 'log_spend': {
         const list = Array.isArray(o.spends) ? o.spends.slice(0, 5) : []; if (!list.length) return bad('no spends in the proposal');
+        if (!noteFrom(stripFiller(msg)) && digits.length === 1) return P('slm_ask', { question: `What was the ₹${digits[0]} for?` });   // an amount with no item ("yaar 200 diye") is a question, never a save
         const calls = []; let unconfirmed = null;
         for (const s of list) {
           const amt = num(s && s.amount_inr); if (!(amt > 0 && amt <= 1e7)) return bad('bad amount in the proposal');
