@@ -23,14 +23,18 @@ ap.add_argument("--data", default="./data")
 ap.add_argument("--out", default="./Sent_model_hinglish")
 ap.add_argument("--epochs", type=float, default=2.0)
 ap.add_argument("--lr", type=float, default=2e-4)
+ap.add_argument("--max_steps", type=int, default=-1, help="stop after N steps (smoke tests only)")
 a = ap.parse_args()
 
-bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()   # a Colab T4 has no bf16, so it falls back to fp16
-dtype = torch.bfloat16 if bf16 else torch.float16
+gpu = torch.cuda.is_available()
+bf16 = gpu and torch.cuda.is_bf16_supported()   # a Colab T4 has no bf16, so it falls back to fp16
+fp16 = gpu and not bf16
+dtype = torch.bfloat16 if bf16 else (torch.float16 if fp16 else torch.float32)   # no GPU (smoke tests only): plain float32
+print("gpu:", gpu, "| dtype:", dtype)
 tok = AutoTokenizer.from_pretrained(a.base)
 if tok.pad_token is None:
     tok.pad_token = tok.eos_token
-model = AutoModelForCausalLM.from_pretrained(a.base, torch_dtype=dtype, device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(a.base, dtype=dtype, device_map="auto")
 
 
 def to_prompt_completion(ex):   # system + user is the prompt; the assistant JSON is the only thing the model learns to produce
@@ -48,11 +52,15 @@ print("train", len(train), "val", len(val))
 
 lora = LoraConfig(r=16, lora_alpha=32, lora_dropout=0.05, task_type="CAUSAL_LM",
                   target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
+BATCH, ACCUM = 2, 8
+total_steps = max(1, int(len(train) / (BATCH * ACCUM) * a.epochs))
+warmup = max(1, int(0.03 * total_steps))   # whole steps: the old `warmup_ratio` option was removed in newer transformers
+print("optimizer steps:", total_steps, "| warmup steps:", warmup)
 cfg = SFTConfig(
-    output_dir=a.out + "_checkpoints", num_train_epochs=a.epochs, learning_rate=a.lr, lr_scheduler_type="cosine", warmup_ratio=0.03,
-    per_device_train_batch_size=2, gradient_accumulation_steps=8, gradient_checkpointing=True,
+    output_dir=a.out + "_checkpoints", num_train_epochs=a.epochs, max_steps=a.max_steps, learning_rate=a.lr, lr_scheduler_type="cosine", warmup_steps=warmup,
+    per_device_train_batch_size=BATCH, gradient_accumulation_steps=ACCUM, gradient_checkpointing=True,
     max_length=1024, logging_steps=10, eval_strategy="steps", eval_steps=100, save_strategy="no",
-    bf16=bf16, fp16=not bf16, report_to="none",
+    bf16=bf16, fp16=fp16, use_cpu=not gpu, report_to="none",
 )
 trainer = SFTTrainer(model=model, args=cfg, train_dataset=train, eval_dataset=val, processing_class=tok, peft_config=lora)
 trainer.train()
