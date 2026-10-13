@@ -105,3 +105,10 @@ Numbers must appear in this turn's tool results, the CONTEXT block, the user's m
 
 ## 10. When unsure
 Prefer the plan over the spec. Prefer the prototype for behaviour and copy. Ask before guessing with money logic. Record decisions in `docs/decisions/`.
+
+## 11. Notion is the manager (keep in sync)
+Project hub: [Hisaab Aunty HQ](https://app.notion.com/p/3f84e39f4071817f94cdc175d50fa5e2). It holds the Tasks board, Decisions log, CA Knowledge Base, Model tests, Docs and links, and Screens and features.
+- After any change to code, docs, rules, tests or plans, update Notion in the same session: add or move the task, log any rule change in the Decisions log, add model results to Model tests, and refresh Docs and links.
+- GitHub holds code and these rules; Notion holds plans, tasks and approvals. If they disagree, stop and ask.
+- Only rows marked **CA approved** in the CA Knowledge Base may be used as facts by Aunty.
+- Never put keys, tokens or passwords in Notion or GitHub.
