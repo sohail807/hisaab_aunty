@@ -33,15 +33,16 @@ function makeLLM(cfgRef) {
   return {
     configured: () => !!(get().enabled && get().proxyUrl),
     async health() { const r = await fetch(url('/health')); return r.json(); },
+    async models() { const r = await fetch(url('/models')); if (!r.ok) throw new Error('the proxy does not list models'); return r.json(); },   // { default, models: [{ id, label, online, default }] }
     async interpret(msg, ctx) {
       const sys = SLM_PROMPT + `\nToday is ${ctx.today} (${ctx.weekday}). Categories: ${ctx.categories.join(', ')}.`;
       const t0 = performance.now();
       const j = await post({ model: get().model || undefined, temperature: 0, max_tokens: 220, stream: false, messages: [{ role: 'system', content: sys }, { role: 'user', content: String(msg).slice(0, 500) }], response_format: get().jsonSchema === false ? undefined : { type: 'json_schema', json_schema: { name: 'intent', schema: INTENT_SCHEMA } } });
       const content = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
       const m = content.match(/\{[\s\S]*\}/); let obj = null; try { obj = m ? JSON.parse(m[0]) : null; } catch (e) { obj = null; }
-      return { obj, raw: content, ms: Math.round(performance.now() - t0), model: j.model || get().model || 'slm', tokens_in: j.usage && j.usage.prompt_tokens, tokens_out: j.usage && j.usage.completion_tokens };
+      return { obj, raw: content, ms: Math.round(performance.now() - t0), model: j.hisaab_model || j.model || get().model || 'slm', tokens_in: j.usage && j.usage.prompt_tokens, tokens_out: j.usage && j.usage.completion_tokens };
     },
-    async ping() { const t0 = performance.now(); const j = await post({ model: get().model || undefined, temperature: 0, max_tokens: 12, messages: [{ role: 'user', content: 'Reply with the single word: ok' }] }, 20000); return { ms: Math.round(performance.now() - t0), model: j.model, text: (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').slice(0, 40) }; },
+    async ping() { const t0 = performance.now(); const j = await post({ model: get().model || undefined, temperature: 0, max_tokens: 12, messages: [{ role: 'user', content: 'Reply with the single word: ok' }] }, 20000); return { ms: Math.round(performance.now() - t0), model: j.hisaab_model || j.model, text: (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').slice(0, 40) }; },
   };
 }
 // ==END LLM==

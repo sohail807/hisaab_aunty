@@ -298,8 +298,8 @@ function installAunty(B) {
       if (hasAmt) return S('whatif', { calls: [{ name: 'what_if', input: { kind: 'one_off_spend', amount_inr: amounts[0].value } }] });
     }
     // compare
-    if (/\b(compare|versus|vs)\b|more than last|less than last|which category (grew|went up|increased|dropped)|grew the most|how does this (week|month)/.test(t)) {
-      if (/month/.test(t)) { const first = today.slice(0, 7) + '-01', pm = addDays(first, -1).slice(0, 7) + '-01'; return S('compare', { calls: [{ name: 'compare_periods', input: { a_from: first, a_to: today, b_from: pm, b_to: addDays(pm, +today.slice(8) - 1) } }], labels: ['this month so far', 'the same days last month'] }); }
+    if (/\b(compare|versus|vs)\b|more than last|less than last|which category (grew|went up|increased|dropped)|grew the most|how does this (week|month)|\b(pichl[ei]|pichhl[ei])\s+(hafte|haphte|week|mahine|mahina|month)\s+(se|ke muqabale|ke mukable)\b|\b(pichl[ei]|pichhl[ei])\s+(hafte|haphte|mahine|mahina)\b.*\b(zyada|jyada|zyaada|kam|bada|barha)\b/.test(t)) {
+      if (/month|mahin/.test(t)) { const first = today.slice(0, 7) + '-01', pm = addDays(first, -1).slice(0, 7) + '-01'; return S('compare', { calls: [{ name: 'compare_periods', input: { a_from: first, a_to: today, b_from: pm, b_to: addDays(pm, +today.slice(8) - 1) } }], labels: ['this month so far', 'the same days last month'] }); }
       return S('compare', { calls: [{ name: 'compare_periods', input: { a_from: addDays(today, -6), a_to: today, b_from: addDays(today, -13), b_to: addDays(today, -7) } }], labels: ['the last 7 days', 'the 7 days before'] });
     }
     // goal explanation

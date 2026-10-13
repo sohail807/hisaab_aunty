@@ -194,7 +194,7 @@ async function runBackendTests() {
     const mkLLM = (fn) => { const calls = { n: 0 }; return { calls, configured: () => true, interpret: async (msg, ctx) => { calls.n++; const obj = await fn(msg, ctx); return { obj, ms: 120, model: 'fake-slm', tokens_in: 310, tokens_out: 40 }; } }; };
     const setup = async (llm) => { const B = mk({ accessTtlMs: 1e13 }); if (llm !== undefined) B.llm = llm; const s = await signup(B, 'slm' + Math.random() + '@x.com'); goal(B, s.uid); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: 2200000 }); spend(B, s.uid, 400, 'food', 8); spend(B, s.uid, 900, 'food', 1); return { B, s }; };
     // 1. no model linked: the API key is required for free-form chat
-    { const { B, s } = await setup(); let x = await chat(B, s, 'pichle hafte se is hafte kitna zyada gaya');
+    { const { B, s } = await setup(); let x = await chat(B, s, 'mujhe ye batao ki mera paisa kaha ja raha hai');
       add(SL, 'without a linked LLM, free-form chat says the API key is needed and does nothing else', x.tools.length === 0 && /not linked yet/.test(x.b.replies[0].text) && /API key/.test(x.b.replies[0].text) && B.db.where('ai_call_log', l => l.outcome === 'llm_not_linked').length === 1, x.b.replies[0].text);
       x = await chat(B, s, 'chai 30'); add(SL, 'without a linked LLM, clear messages still work through the parser', x.tools[0].name === 'log_spend' && x.b.summary_changed);
       add(SL, 'a model-less server still passes the "ask the user" cases', (await chat(B, s, 'paid Rohan')).b.replies[0].text.includes('How much')); }
@@ -203,7 +203,7 @@ async function runBackendTests() {
       await chat(B, s, 'chai 30'); await chat(B, s, 'how am i doing'); await chat(B, s, 'can I buy shoes for 2k?'); await chat(B, s, 'undo');
       add(SL, 'parser first: spends, status, purchase checks and undo never call the model', llm.calls.n === 0, 'model calls: ' + llm.calls.n); }
     // 3. the model understands what the parser cannot; our code still runs the tools
-    { const llm = mkLLM(async () => ({ intent: 'compare', period: 'week' })); const { B, s } = await setup(llm); const x = await chat(B, s, 'pichle hafte se is hafte kitna zyada gaya');
+    { const llm = mkLLM(async () => ({ intent: 'compare', period: 'week' })); const { B, s } = await setup(llm); const x = await chat(B, s, 'mujhe ye batao ki mera paisa kaha ja raha hai');
       add(SL, 'a free-form question is turned into a validated intent, run through our tools, and answered from tool results', llm.calls.n === 1 && x.tools[0].name === 'compare_periods' && /Biggest rise/.test(x.b.replies[0].text) && x.trace.outcome === 'ok' && x.trace.slm.accepted, x.b.replies[0].text);
       add(SL, 'the model call is logged with tokens and no message text', B.db.where('ai_call_log', l => l.purpose === 'chat_slm').length === 1 && B.db.where('ai_call_log', l => l.purpose === 'chat_slm')[0].model === 'fake-slm' && !('text' in B.db.where('ai_call_log', l => l.purpose === 'chat_slm')[0])); }
     // 4. a financial write needs the amount in the user's own message as digits
@@ -243,6 +243,8 @@ async function runBackendTests() {
     x = await chat(B, s, 'Can I buy shoes for 2k?'); add(EV, 'Can I buy shoes for 2k?: check_purchase 2000, label shoes, nothing saved', names(x).join() === 'check_purchase' && x.tools[0].input.amount_inr === 2000 && /shoes/.test(x.tools[0].input.label) && B.rawSpends(s.uid).length === before);
     add(EV, 'a "no" verdict names the days of goal lost', /\d+(\.\d)? days? of Goa trip/.test(x.b.replies[0].text), x.b.replies[0].text);
     x = await chat(B, s, 'kal ka auto 90'); const yday = addDays(B.today(B.userById(s.uid)), -1); add(EV, 'kal ka auto 90: log_spend 90 ride dated yesterday', x.tools[0].input.amount_inr === 90 && x.tools[0].input.category === 'ride' && x.tools[0].result.date === yday, x.tools[0].result.date);
+    x = await chat(B, s, 'pichle hafte se is hafte kitna zyada gaya'); add(EV, 'Hinglish compare "pichle hafte se is hafte kitna zyada gaya": compare_periods, no model needed', names(x).join() === 'compare_periods');
+    x = await chat(B, s, 'pichle mahine se kitna kam kharch hua'); add(EV, 'Hinglish compare with months: compare_periods', names(x).join() === 'compare_periods');
     x = await chat(B, s, 'how am i doing'); add(EV, 'how am i doing: get_summary', x.tools[0].name === 'get_summary');
     x = await chat(B, s, 'oops, undo that'); add(EV, 'oops, undo that: undo_last_spend', names(x).join() === 'undo_last_spend' && x.tools[0].result.undone);
     x = await chat(B, s, 'paid Rohan'); add(EV, 'paid Rohan: no tool, asks the amount', nTools(x) === 0 && /how much/i.test(x.b.replies[0].text));

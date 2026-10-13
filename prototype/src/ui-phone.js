@@ -7,7 +7,7 @@ const clock = { offset: LS.get('ha_clock_off', 0), now() { return Date.now() + t
 const DB = createDB('ha_db_v1');
 const CFG = Object.assign({ aiDown: false, llmNudges: false, injectBadNumber: false, injectBadRegional: false }, LS.get('ha_cfg', {}));
 const B = createBackend({ db: DB, clock, cfg: CFG }); installAunty(B);
-CFG.llm = Object.assign({ enabled: false, proxyUrl: 'http://localhost:8787', model: '', timeoutMs: 15000, jsonSchema: true }, CFG.llm || {});
+CFG.llm = Object.assign({ enabled: false, proxyUrl: 'http://localhost:8787', model: '', timeoutMs: 60000, jsonSchema: true }, CFG.llm || {});
 B.llm = makeLLM(CFG);   // the small language model adapter; the API key lives only in llm-proxy.js
 const saveCfg = () => LS.set('ha_cfg', { aiDown: CFG.aiDown, llmNudges: CFG.llmNudges, injectBadNumber: CFG.injectBadNumber, injectBadRegional: CFG.injectBadRegional, llm: CFG.llm });
 let S = LS.get('ha_session', null);
