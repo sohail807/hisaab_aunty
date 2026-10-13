@@ -1,4 +1,4 @@
-# Training guide: Hinglish intent model (step by step)
+﻿# Training guide: Hinglish intent model (step by step)
 
 What training does here: it teaches the model to turn one message into ONE JSON intent (log a spend, status, undo, and so on). It does not teach tax or banking facts; those go in the CA-approved knowledge base.
 
@@ -9,15 +9,15 @@ Status of the tools: the dataset generator, the evaluator and the training scrip
 2. On your PC, folder `Documents\Sent_model` must hold the ORIGINAL model files: `config.json`, `generation_config.json`, `tokenizer.json`, `tokenizer_config.json`, `chat_template.jinja`, `model.safetensors`. The `.gguf` files are not needed.
 3. On your PC, folder `Documents\Hisaab Aunty\prototype\training\data` must hold `train.jsonl`, `val.jsonl`, `test.jsonl`. If missing, run `node training/gen_dataset.js` inside `prototype`.
 
-## Part B. Put the files in Google Drive
+## Part B. Put the MODEL in Google Drive
 1. Open drive.google.com, create a folder `Hisaab`.
 2. Upload the folder `Sent_model` into `Hisaab` (slow: 5.75 GB).
-3. Upload the folder `data` into `Hisaab`.
-4. Check: Drive now shows `Hisaab/Sent_model/model.safetensors` and `Hisaab/data/train.jsonl`.
+3. Check: Drive shows `Hisaab/Sent_model/model.safetensors`.
+The training data does NOT need uploading any more: the notebook gets it from GitHub and downloads the public datasets itself.
 
 ## Part C. Run the training in Google Colab
 1. Open colab.research.google.com and sign in.
-2. **File, Upload notebook**, choose `prototype/training/train_colab.ipynb` (from this repo).
+2. **File, Upload notebook**, or open it straight from GitHub: https://colab.research.google.com/github/sohail807/hisaab_aunty/blob/main/prototype/training/train_colab.ipynb
 3. **Runtime, Change runtime type**, choose **T4 GPU**, Save.
 4. **Runtime, Run all.** Allow Drive access when asked.
 5. The first cell prints OK or MISSING for each file. If anything says MISSING, fix the Drive folder names and run again.
@@ -50,3 +50,4 @@ Round 2 order: (1) team writes 300 real messages with intents, (2) converter for
 - Every label must pass the validator.
 - No real user data without consent; no names, numbers or amounts that identify a person.
 - Facts about tax and banking come from the CA-approved knowledge base, not from training.
+

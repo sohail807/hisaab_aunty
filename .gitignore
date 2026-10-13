@@ -4,4 +4,4 @@ node_modules/
 !.env.example
 *.log
 .DS_Store
-prototype/training/data/
+prototype/training/data/last_eval_*.json

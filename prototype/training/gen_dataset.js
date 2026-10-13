@@ -130,6 +130,7 @@ const B = createBackend({ db: createDB(null), clock: { t: Date.UTC(2026, 9, 11, 
   const uid = sr.body.user.id; B.setGoal(uid, { name: 'Goa trip', cost_paise: 2600000, deadline: '2027-02-11', free_income_paise: 2200000 });
   const baseCtx = B.ctxFor(uid);
   // split WHOLE templates per intent, so the test set holds phrasings the model never saw; then balance the examples per intent
+  const SCALE = +(process.argv[2] || 2);   // how many times bigger than the base counts (node gen_dataset.js 3)
   const want = { log_spend: 1100, check_purchase: 300, status: 260, undo: 160, query: 300, compare: 200, goal_info: 160, accounts: 120, limits: 120, streak: 100, recap: 80, ask: 300, smalltalk: 250, unknown: 300 };
   const intentOf = t => t.make({ today: '2026-10-01' }).out.intent;
   const byIntent = {}; T.forEach(t => { (byIntent[intentOf(t)] = byIntent[intentOf(t)] || []).push(t); });
@@ -139,7 +140,7 @@ const B = createBackend({ db: createDB(null), clock: { t: Date.UTC(2026, 9, 11, 
     const sp = list.map((t, p) => (list.length >= 4 && p % 5 === 4 ? 'test' : list.length >= 3 && p % 5 === 3 ? 'val' : 'train'));
     for (const split of ['train', 'val', 'test']) {
       const ts = list.filter((t, p) => sp[p] === split); if (!ts.length) continue;
-      const total = Math.ceil(want[intent] * (split === 'train' ? 1 : split === 'val' ? 0.12 : 0.18));
+      const total = Math.ceil(want[intent] * SCALE * (split === 'train' ? 1 : split === 'val' ? 0.12 : 0.18));
       for (const t of ts) {
         const uniq = new Set(Array.from({ length: 6 }, () => t.make({ today: '2026-10-01' }).msg)).size;
         const n = Math.min(Math.ceil(total / ts.length), uniq <= 2 ? 16 : 400), seen = new Set();
