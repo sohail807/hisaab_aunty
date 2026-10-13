@@ -28,3 +28,14 @@ Browser page (5177)  ->  LLM proxy (8787)  ->  llama-server for each model (8080
 - The proxy timeout is 60 s, the page timeout default is 60 s, because CPU models are slow.
 - The validator (`intentToPlan`) now accepts amounts sent as text (`"450.0"`) and rejects a purchase check whose amount the user never typed.
 - `serve.js` always serves the file next to it and sends no-cache. (An old copy of it, started from another folder, had been serving an outdated page.)
+
+## What the team model is (read from its own files on 2026-10-13)
+- Architecture `Qwen2ForCausalLM`, 36 layers, 2048 wide, 16 attention heads, about 3.1 billion parameters, 32,768-token context, 16-bit weights (5.75 GB).
+- The chat format (ChatML), the default line "You are Qwen, created by Alibaba Cloud", and the sampling defaults (temperature 0.7, top_p 0.8, top_k 20, repetition penalty 1.05) match the Qwen2.5 family's instruction models.
+- The folder has no model card and `_name_or_path` is empty, and it was saved with transformers 5.19. So the files show the SHAPE and the FAMILY, **not what it was trained on or whether it was fine-tuned**.
+
+## How to find out what it was trained on
+1. Ask the team for the model card or training record: base model, data, date, license, and whether it was fine-tuned.
+2. Compare with the official release: download the matching Qwen model from Hugging Face and compare file hashes or the weights. Same weights means unchanged; different weights means someone fine-tuned it.
+3. Test it. Run `node training/eval_model.js` on the Hinglish test set and write the results in Notion (Model tests). Tests show what it can do, not what it was trained on.
+4. Never assume it knows Indian tax or banking rules. Facts come from the CA-approved knowledge base.
