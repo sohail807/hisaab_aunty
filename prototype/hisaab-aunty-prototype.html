@@ -1679,7 +1679,7 @@ function installAunty(B) {
     if (!INTENTS.includes(o.intent)) return bad('unknown intent: ' + String(o.intent).slice(0, 30));
     const today = c.today, uid = c.user.id, cats = B.catsOf(uid).map(x => x.slug), digits = findAmounts(msg).map(x => x.value);
     const P = (kind, extra) => ({ ok: true, plan: Object.assign({ kind, calls: [], fromModel: true }, extra || {}) });
-    const num = v => (typeof v === 'number' && isFinite(v) ? v : NaN);
+    const num = v => { if (typeof v === 'string' && /^\s*\d+(\.\d+)?\s*$/.test(v)) v = parseFloat(v); return typeof v === 'number' && isFinite(v) ? v : NaN; };   // some models send "450.0" as text
     const day = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) && v.slice(0, 10) <= today && v.slice(0, 10) >= addDays(today, -400)) ? v.slice(0, 10) : undefined;
     const cat = v => (cats.includes(v) ? v : null);
     const per = (txt, dflt) => parsePeriod(String(txt || '').toLowerCase(), today) || dflt;
@@ -1697,7 +1697,7 @@ function installAunty(B) {
         if (unconfirmed) return P('slm_confirm', { ask: unconfirmed, allow: [unconfirmed.amount] });
         return P('log', { calls, serious: /\b(emergency|hospital|rent short)\b/i.test(msg) });
       }
-      case 'check_purchase': { const amt = num(o.amount_inr); if (!(amt > 0 && amt <= 1e8)) return bad('bad amount'); return P('check', { calls: [{ name: 'check_purchase', input: { amount_inr: amt, label: String(o.label || '').replace(/[^\p{L}\p{N} -]/gu, '').slice(0, 40) } }] }); }
+      case 'check_purchase': { const amt = num(o.amount_inr); if (!(amt > 0 && amt <= 1e8)) return bad('bad amount'); if (!digits.some(d => Math.abs(d - amt) < 0.01)) return bad('the amount is not in the user\'s message'); return P('check', { calls: [{ name: 'check_purchase', input: { amount_inr: amt, label: String(o.label || '').replace(/[^\p{L}\p{N} -]/gu, '').slice(0, 40) } }] }); }
       case 'status': { const p = ['today', 'week', 'month', 'goal'].includes(o.period) ? o.period : 'today'; return P('status', { period: p, calls: [{ name: 'get_summary', input: { period: p } }].concat(p === 'today' ? [{ name: 'get_summary', input: { period: 'week' } }] : []) }); }
       case 'undo': return P('undo', { calls: [{ name: 'undo_last_spend', input: {} }] });
       case 'query': {
@@ -2315,6 +2315,8 @@ async function runBackendTests() {
       add(SL, 'validator: unknown categories fall back to other; future dates are dropped', V({ intent: 'log_spend', spends: [{ amount_inr: 90, category: 'gold bars', when: '2099-01-01' }] }, 'x 90').plan.calls[0].input.category === 'other' && !('when' in V({ intent: 'log_spend', spends: [{ amount_inr: 90, category: 'ride', when: '2099-01-01' }] }, 'x 90').plan.calls[0].input));
       add(SL, 'validator: read-only intents map to the right tools', V({ intent: 'status', period: 'month' }).plan.calls[0].input.period === 'month' && V({ intent: 'query', mode: 'biggest', period: 'this week' }).plan.calls[0].name === 'query_spends' && V({ intent: 'goal_info' }).plan.calls[0].name === 'get_goal_details' && V({ intent: 'accounts' }).plan.calls[0].name === 'get_accounts');
       add(SL, 'validator: at most five spends and no spends at all are handled', V({ intent: 'log_spend', spends: [] }).ok === false && V({ intent: 'log_spend', spends: Array.from({ length: 9 }, () => ({ amount_inr: 10, category: 'chai' })) }, '10').plan.calls.length === 5);
+      add(SL, 'validator: an amount sent as text ("450.0") is accepted when the digits are in the message', V({ intent: 'log_spend', spends: [{ amount_inr: '450.0', category: 'food', note: 'zomato' }] }, 'zomato pe 450').plan.calls[0].input.amount_inr === 450);
+      add(SL, 'validator: a purchase check with an amount the user never typed is rejected', V({ intent: 'check_purchase', amount_inr: 20, label: 'chai' }, 'aaj chai pe kitna gaya').ok === false && V({ intent: 'check_purchase', amount_inr: 2000, label: 'shoes' }, 'shoes 2k lena hai').ok === true);
       add(SL, 'validator: a clarifying question must be present', V({ intent: 'ask', question: '' }).ok === false && V({ intent: 'ask', question: 'What was it for?' }).plan.kind === 'slm_ask'); }
   }
 

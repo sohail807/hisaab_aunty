@@ -8,7 +8,7 @@
 const http = require('http');
 const BASE = (process.env.LLM_BASE_URL || '').replace(/\/$/, ''), KEY = process.env.LLM_API_KEY || '', MODEL = process.env.LLM_MODEL || '';
 const PORT = +process.env.PORT || 8787, ORIGINS = (process.env.ALLOW_ORIGIN || 'http://localhost:5177').split(',').map(s => s.trim());
-const TIMEOUT = +process.env.LLM_TIMEOUT_MS || 20000, MAX_TOKENS = +process.env.LLM_MAX_TOKENS || 400;
+const TIMEOUT = +process.env.LLM_TIMEOUT_MS || 60000, MAX_TOKENS = +process.env.LLM_MAX_TOKENS || 400;
 if (!BASE || !KEY) {
   console.error('Hisaab Aunty LLM proxy: LLM_BASE_URL and LLM_API_KEY are required.\n  Example: LLM_BASE_URL=http://127.0.0.1:8080/v1 LLM_API_KEY=... node llm-proxy.js');
   process.exit(1);
