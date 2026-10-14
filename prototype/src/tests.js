@@ -245,6 +245,21 @@ async function runBackendTests() {
     { const o = await run('should I invest 5000 in sip'); add(RW, 'asking for investment advice is still declined and saves nothing', o.ds === 0 && /outside what I do/.test(o.text), o.text); }
   }
 
+  // ===== goals by chat: creating, changing, asking about, deleting, with and without an income =====
+  { const GL = 'Goals by chat';
+    const fresh = async (email, income, withGoal) => { const B = mk(); const s = await signup(B, email); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: income ? 5000000 : null }); if (withGoal) B.setGoal(s.uid, { name: 'Goa trip', cost_paise: 2600000, deadline: '2027-02-11', free_income_paise: 5000000 }); return { B, s }; };
+    for (const m of ['mujhe ek goal banana hai', 'naya goal banao', 'goal set karna hai', 'I want to create a goal', 'new goal', 'goal add karo', 'ek aur goal', 'mujhe goal chahiye', 'savings goal banana hai']) {
+      const { B, s } = await fresh('g1' + m.length + '@x.com', true, false); const x = await chat(B, s, m); const f = B.userById(s.uid).flow;
+      add(GL, `"${m}" starts the goal setup instead of explaining the budget`, !!f && f.mode === 'goal' && f.step === 'goal' && !/free income/.test(x.b.replies.map(r => r.text).join(' ')), x.b.replies.map(r => r.text).join(' | ')); }
+    for (const [m, name] of [['I want to save for a trip', 'trip'], ['saving for my wedding', 'wedding'], ['bike ke liye save karna hai', 'bike']]) {
+      const { B, s } = await fresh('g2' + m.length + '@x.com', true, false); await chat(B, s, m); const f = B.userById(s.uid).flow; add(GL, `"${m}" names the goal and goes straight to the cost question`, !!f && f.step === 'cost' && new RegExp(name, 'i').test(f.data.name || '')); }
+    { const { B, s } = await fresh('g3@x.com', true, false); await chat(B, s, 'mujhe ek goal banana hai'); await chat(B, s, 'my wedding'); await chat(B, s, '300000'); await chat(B, s, '18 months'); const g = B.ctxFor(s.uid).goals; add(GL, 'the whole conversation ends with the goal saved (Wedding, ₹3,00,000)', g.length === 1 && /wedding/i.test(g[0].name) && g[0].cost_paise === 30000000); }
+    for (const m of ['goal kab tak hoga', 'what is my goal', 'how much should I save for a trip?']) { const { B, s } = await fresh('g4' + m.length + '@x.com', true, true); await chat(B, s, m); add(GL, `"${m}" is a question, so no goal setup starts`, !B.userById(s.uid).flow); }
+    for (const m of ['delete my goal', 'goal hatao', 'remove goal']) { const { B, s } = await fresh('g5' + m.length + '@x.com', true, true); const x = await chat(B, s, m); add(GL, `"${m}" points to the Goal tab and removes nothing`, /Goal tab/.test(x.b.replies[0].text) && B.ctxFor(s.uid).goals.length === 1); }
+    for (const m of ['change my goal', 'goal badalna hai']) { const { B, s } = await fresh('g6' + m.length + '@x.com', true, true); await chat(B, s, m); const f = B.userById(s.uid).flow; add(GL, `"${m}" starts a redo of the goal`, !!f && f.replace === true); }
+    { const { B, s } = await fresh('g7@x.com', false, false); await chat(B, s, 'mujhe ek goal banana hai'); const f = B.userById(s.uid).flow; const asked = B.db.where('chat_message', r => r.user_id === s.uid && r.role === 'aunty' && /monthly income/.test(r.text || '')); add(GL, 'with no income, the goal setup asks for the income first', !!f && f.mode === 'full' && f.step === 'income' && asked.length > 0, asked[0] && asked[0].text); }
+  }
+
   // ===== questions about spending work before an income is set, in many phrasings =====
   { const QN = 'Questions without an income';
     const B = mk(); const s = await signup(B, 'qn@x.com'); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: null });

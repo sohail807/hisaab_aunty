@@ -1424,9 +1424,13 @@ function installAunty(B) {
   const uiFor = (step) => step === 'goal' ? { type: 'skip', label: 'Skip, just track daily spending', text: 'skip' } : OPTIONAL.includes(step) ? { type: 'skip', label: 'Skip', text: 'skip' } : step === 'months' ? { type: 'slider' } : null;
   const GREET = (n) => `Namaste ${n}! I am Hisaab Aunty, and I turn "where did my money go?" into "oh, so that is where."`;
   B.startGoalFlow = (uid, first, opts) => {
-    const u = B.userById(uid), mode = first ? 'full' : 'goal'; db.update('app_user', u, { flow: { mode, step: FULL[0] === 'income' && first ? 'income' : 'goal', tries: 0, data: {}, replace: !!(opts && opts.replace) } });
+    const u = B.userById(uid), needIncome = !first && u.income_paise == null, mode = (first || needIncome) ? 'full' : 'goal';   // a goal needs an income to be worked out, so ask for it first when it is missing
+    const nm = opts && opts.name ? cleanGoalName(opts.name) : null, data = {}; if (nm) { data.name = nm; data.icon = goalIcon(nm); }   // "saving for my wedding" already names the goal
+    db.update('app_user', u, { flow: { mode, step: mode === 'full' ? 'income' : nm ? 'cost' : 'goal', tries: 0, data, replace: !!(opts && opts.replace) } });
     if (first) { B.addAunty(uid, GREET(u.display_name.split(' ')[0]), 'happy', { tpl: 'greet', flow: 'greet' }); B.addAunty(uid, Q.income, 'neutral', { flow: 'income' }); }
-    else { B.addAunty(uid, opts && opts.replace ? 'Chalo, let us redo your goal. Type "cancel" any time to keep the old one.' : 'Chalo, another goal! Type "cancel" any time to stop.', 'happy', { flow: 'goal' }); B.addAunty(uid, Q.goal.split(' Or skip')[0], 'neutral', { flow: 'goal', ui: { type: 'skip', label: 'Never mind', text: 'cancel' } }); }
+    else if (needIncome) { B.addAunty(uid, 'Happy to set up a goal! First, what is your monthly income? Salary or allowance is fine. It is how I work out what you can really save. Type "cancel" any time to stop.', 'happy', { flow: 'income' }); }
+    else if (nm) { B.addAunty(uid, `${data.icon} ${nm}, lovely! Type "cancel" any time to stop.`, 'happy', { flow: 'cost' }); B.addAunty(uid, Q.cost, 'neutral', { flow: 'cost' }); }
+    else { B.addAunty(uid, opts && opts.replace ? 'Chalo, let us redo your goal. Type "cancel" any time to keep the old one.' : B.ctxFor(uid).goals.length ? 'Chalo, another goal! Type "cancel" any time to stop.' : 'Chalo, let us set your goal! Type "cancel" any time to stop.','happy', { flow: 'goal' }); B.addAunty(uid, Q.goal.split(' Or skip')[0], 'neutral', { flow: 'goal', ui: { type: 'skip', label: 'Never mind', text: 'cancel' } }); }
   };
   function handleFlow(uid, text) {
     const u = B.userById(uid), f = u.flow, t = text.trim(); const steps = f.mode === 'full' ? FULL : GOAL_ONLY;
@@ -1444,6 +1448,7 @@ function installAunty(B) {
     else if (skipped) f.data[f.step] = null;
     else { const x = parseAmount(t); if (x == null || x < 0 || x > 1e9) return retry('I could not read that amount, or tap skip.'); f.data[f.step] = x; }
     let next = steps[steps.indexOf(f.step) + 1]; if (f.step === 'goal' && f.data.noGoal) next = null;
+    if (next === 'goal' && f.data.name) { next = 'cost'; ack = `${f.data.icon} ${f.data.name}. `; }   // the goal was already named in the request
     if (next) { f.step = next; f.tries = 0; db.update('app_user', u, { flow: f }); return { text: ack + Q[next], mood: 'neutral', ui: uiFor(next) }; }
     // all answered: save income and extras, then the goal (if any)
     const d0 = f.data, today = B.today(u), patch = {};
@@ -1694,7 +1699,14 @@ function installAunty(B) {
       return S('income_in', { calls: [{ name: 'log_income', input: { amount_inr: amounts[0].value, title } }] });
     }
     if (/^(that('| i)?s all|that is all|no more|all good|nothing else|i am done|i'm done)\b/.test(t)) return S('smalltalk', { done: true });
-    if (/\b(add|another|new|second|one more|more|set|set up|start)\b.{0,25}\bgoals?\b|\bgoals?\b.{0,20}\b(change|set up|setup|new|add)\b|change my goal|\b(change|edit|update|replace)\b.{0,20}\bgoals?\b/.test(t) && !/(explain|maths|math|how (much|many)|what)/.test(t)) return S('goal_setup', { replace: /\b(change|edit|update|replace)\b/.test(t) && c.goals.length <= 1 });
+    { // goals, in English and Hinglish. Creating or changing one goes to the scripted setup (never the model); deleting is a Goal-tab action.
+      const askingAbout = /(explain|maths|math|how (much|many)|what|kitna|kab|kyun|kyu)/.test(t);
+      if (/\b(delete|remove|hata\w*|hatao|band kar\w*)\b.{0,20}\bgoals?\b|\bgoals?\b.{0,20}\b(delete|remove|hata\w*|hatao|band kar\w*)\b/.test(t)) return S('goal_manage_hint');
+      const change = /\b(change|edit|update|replace|badal\w*|badlo)\b.{0,20}\bgoals?\b|\bgoals?\b.{0,20}\b(change|badal\w*|badlo|edit|update)\b/.test(t);
+      const create = /\b(add|another|new|second|one more|more|set|set up|start)\b.{0,25}\bgoals?\b|\bgoals?\b.{0,20}\b(set up|setup|new|add)\b|\bgoals?\b.{0,30}\b(banana|banao|bana do|banani|set kar\w*|add kar\w*|shuru|jodna|jodo|create|make|chahiye|lena hai|rakhna hai|rakhni hai)\b|\b(naya|nayi|ek aur|ek or|dusra|doosra)\b.{0,15}\bgoals?\b|\b(create|make|want|need|build|begin)\b.{0,20}\b(a |an |one |my )?(savings? )?goals?\b/.test(t);
+      const sv = t.match(/\b(?:saving|save|saving up|bachat)\b(?:\s+\d[\d,.]*\s*(?:k|lakh)?)?\s+for\s+(?:a |an |my |the |ek )?([a-z][a-z ]{1,28}?)\s*[.!?]*$/) || t.match(/^(?:mujhe |mera |main |mai )?(?:ek )?([a-z][a-z ]{1,24}?) ke liye (?:save|bachat|paisa jama|paise jama|paise bachane)/);
+      if ((create || change || sv) && !askingAbout) return S('goal_setup', { replace: change && c.goals.length <= 1, name: sv ? sv[1].trim() : null });
+    }
     if (/^(please\s+)?remember\b/.test(t)) return S('remember', { calls: [{ name: 'remember', input: { text: cap(msg.replace(/^\s*(please\s+)?remember( that)?\s*/i, '').trim()) } }] });
     if (/what do you (remember|know)|my memories|what.s in your memory/.test(t)) return S('memories', { calls: [{ name: 'list_memories', input: {} }] });
     if (/^forget\b|\bforget (that|it|this)\b/.test(t)) return S('forget', { needList: true, query: t.replace(/^\s*forget( that| it| this| about)?\s*/, '').trim() });
@@ -1853,6 +1865,7 @@ function installAunty(B) {
       case 'distress': return { text: plan.selfHarm ? 'I am really sorry you are feeling this way. Please talk to someone you trust right now, or call a local helpline. You do not have to carry this alone. I am here whenever you want to look at the numbers, no jokes.' : 'I am sorry, that sounds heavy. Money stress is real, and talking to someone you trust can help. When you are ready, I will sort the numbers with you, calmly, no jokes.', mood: 'neutral' };
       case 'no_goal': return { text: 'Tell me your monthly income first so I can work out your daily number. Just type it, like 40k.', mood: 'neutral' };
       case 'set_income': { const r = results[0]; if (!r || r.error) return { text: 'Your monthly income is already set. Open Settings (the gear icon) to change it.', mood: 'neutral' }; const over = r.over_today && r.left_today_inr != null ? ` With what you have already logged today, you are ${R(-r.left_today_inr)} over, but tomorrow is a fresh day.` : ''; return { text: `Got it, your monthly income is ${R(r.amount_inr)}.${r.daily_budget_inr != null ? ` That gives you about ${R(r.daily_budget_inr)} a day to spend, spread over ${r.days_in_month} days this month.` : ''}${over} You can change it any time in Settings. Tell me what you spend and I will keep score.`, mood: 'happy', actions: [{ type: 'income_set' }] }; }
+      case 'goal_manage_hint': return { text: 'Goals are managed in the Goal tab: open it, pick the goal, and edit or remove it there. I do not delete goals from chat, so nothing disappears by accident.', mood: 'neutral' };
       case 'income_in': { const r = results[0]; if (!r || r.error) return { text: 'That amount looks off. Can you tell me again how much came in?', mood: 'neutral' }; return { text: `Noted ${R(r.amount_inr)} as income (${r.title}). It shows in your Ledger this month. Your daily number still comes from the monthly income in Settings, so update that if it changed.`, mood: 'happy', actions: [{ type: 'income_logged' }] }; }
       case 'correct_last': { const r = results[0]; if (!r || !r.edited) return { text: 'There is nothing to fix yet. Tell me a spend first, like "chai 30".', mood: 'neutral' }; const tail = r.left_today_inr == null ? '' : r.left_today_inr < 0 ? ` That puts today ${R(-r.left_today_inr)} over.` : ` ${R(r.left_today_inr)} left today.`; return { text: `Fixed: ${r.note} is now ${R(r.amount_inr)}, it was ${R(r.old_amount_inr)}.${tail}`, mood: 'neutral', actions: [{ type: 'spend_edited', spend_id: r.spend_id }] }; }
       case 'correct_ask': return { text: 'I see two amounts there, so I have not changed anything. Tell me the right one like "change last to 50" and I will fix the last entry.', mood: 'neutral' };
@@ -2041,7 +2054,7 @@ function installAunty(B) {
     if (!c0.d && (plan.calls || []).some(x => NEEDS_BUDGET.has(x.name))) plan = { kind: 'no_goal', calls: [] };   // a daily budget needs an income, so ask for it
     turn.trace.plan = plan.kind;
     // goal change is handed to the scripted flow
-    if (plan.kind === 'goal_setup') { B.logAI(uid, 'chat', cfg.chatModel, inText, '[goal_setup]', 400, 'goal_setup'); B.startGoalFlow(uid, false, { replace: plan.replace }); B.lastTrace = turn.trace; turn.trace.final = '[goal_setup]'; return { replies: [], actions: [], summary_changed: false, flow_started: true }; }
+    if (plan.kind === 'goal_setup') { B.logAI(uid, 'chat', cfg.chatModel, inText, '[goal_setup]', 400, 'goal_setup'); B.startGoalFlow(uid, false, { replace: plan.replace, name: plan.name }); B.lastTrace = turn.trace; turn.trace.final = '[goal_setup]'; return { replies: [], actions: [], summary_changed: false, flow_started: true }; }
     // tool loop, max 6 rounds
     const results = []; let calls = plan.calls;
     if (plan.needList) {   // forget needs a memory id: round 1 lists, round 2 forgets
@@ -2452,6 +2465,21 @@ async function runBackendTests() {
     for (const [m, to] of [['it was 50 not 500', 50], ['actually that was 250', 250], ['edit last to 100', 100], ['galti se 500 likh diya tha 50 hai', 50]]) { await run('tea 500'); const n1 = spends().length; const o = await run(m); const last = spends().sort((a, b) => b.created_at.localeCompare(a.created_at))[0]; add(RW, `correction "${m}" fixes the LAST spend to ${to} and adds nothing`, o.ds === 0 && spends().length === n1 && last.amount_paise === to * 100, o.text); }
     { const o = await run('delete last'); add(RW, '"delete last" undoes the last spend', o.ds === -1, o.text); const o2 = await run('cancel last entry'); add(RW, '"cancel last entry" undoes the last spend', o2.ds === -1, o2.text); }
     { const o = await run('should I invest 5000 in sip'); add(RW, 'asking for investment advice is still declined and saves nothing', o.ds === 0 && /outside what I do/.test(o.text), o.text); }
+  }
+
+  // ===== goals by chat: creating, changing, asking about, deleting, with and without an income =====
+  { const GL = 'Goals by chat';
+    const fresh = async (email, income, withGoal) => { const B = mk(); const s = await signup(B, email); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: income ? 5000000 : null }); if (withGoal) B.setGoal(s.uid, { name: 'Goa trip', cost_paise: 2600000, deadline: '2027-02-11', free_income_paise: 5000000 }); return { B, s }; };
+    for (const m of ['mujhe ek goal banana hai', 'naya goal banao', 'goal set karna hai', 'I want to create a goal', 'new goal', 'goal add karo', 'ek aur goal', 'mujhe goal chahiye', 'savings goal banana hai']) {
+      const { B, s } = await fresh('g1' + m.length + '@x.com', true, false); const x = await chat(B, s, m); const f = B.userById(s.uid).flow;
+      add(GL, `"${m}" starts the goal setup instead of explaining the budget`, !!f && f.mode === 'goal' && f.step === 'goal' && !/free income/.test(x.b.replies.map(r => r.text).join(' ')), x.b.replies.map(r => r.text).join(' | ')); }
+    for (const [m, name] of [['I want to save for a trip', 'trip'], ['saving for my wedding', 'wedding'], ['bike ke liye save karna hai', 'bike']]) {
+      const { B, s } = await fresh('g2' + m.length + '@x.com', true, false); await chat(B, s, m); const f = B.userById(s.uid).flow; add(GL, `"${m}" names the goal and goes straight to the cost question`, !!f && f.step === 'cost' && new RegExp(name, 'i').test(f.data.name || '')); }
+    { const { B, s } = await fresh('g3@x.com', true, false); await chat(B, s, 'mujhe ek goal banana hai'); await chat(B, s, 'my wedding'); await chat(B, s, '300000'); await chat(B, s, '18 months'); const g = B.ctxFor(s.uid).goals; add(GL, 'the whole conversation ends with the goal saved (Wedding, ₹3,00,000)', g.length === 1 && /wedding/i.test(g[0].name) && g[0].cost_paise === 30000000); }
+    for (const m of ['goal kab tak hoga', 'what is my goal', 'how much should I save for a trip?']) { const { B, s } = await fresh('g4' + m.length + '@x.com', true, true); await chat(B, s, m); add(GL, `"${m}" is a question, so no goal setup starts`, !B.userById(s.uid).flow); }
+    for (const m of ['delete my goal', 'goal hatao', 'remove goal']) { const { B, s } = await fresh('g5' + m.length + '@x.com', true, true); const x = await chat(B, s, m); add(GL, `"${m}" points to the Goal tab and removes nothing`, /Goal tab/.test(x.b.replies[0].text) && B.ctxFor(s.uid).goals.length === 1); }
+    for (const m of ['change my goal', 'goal badalna hai']) { const { B, s } = await fresh('g6' + m.length + '@x.com', true, true); await chat(B, s, m); const f = B.userById(s.uid).flow; add(GL, `"${m}" starts a redo of the goal`, !!f && f.replace === true); }
+    { const { B, s } = await fresh('g7@x.com', false, false); await chat(B, s, 'mujhe ek goal banana hai'); const f = B.userById(s.uid).flow; const asked = B.db.where('chat_message', r => r.user_id === s.uid && r.role === 'aunty' && /monthly income/.test(r.text || '')); add(GL, 'with no income, the goal setup asks for the income first', !!f && f.mode === 'full' && f.step === 'income' && asked.length > 0, asked[0] && asked[0].text); }
   }
 
   // ===== questions about spending work before an income is set, in many phrasings =====
