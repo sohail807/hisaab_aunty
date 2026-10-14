@@ -26,6 +26,7 @@ ap.add_argument("--out", default="./Sent_model_hinglish")
 ap.add_argument("--ckpt", default=None, help="where progress is saved (use a Google Drive folder); default: next to --out")
 ap.add_argument("--epochs", type=float, default=2.0)
 ap.add_argument("--lr", type=float, default=2e-4)
+ap.add_argument("--rank", type=int, default=16, help="size of the add-on: bigger holds more knowledge (32 or 64 for large mixed data)")
 ap.add_argument("--save_steps", type=int, default=50, help="save progress every N steps")
 ap.add_argument("--val_max", type=int, default=300, help="use at most N validation examples (keeps the quiz short)")
 ap.add_argument("--max_steps", type=int, default=-1, help="stop after N steps (smoke tests only)")
@@ -63,7 +64,7 @@ train, val = load("train"), load("val")
 val = val.select(range(min(len(val), a.val_max)))
 print("train", len(train), "val", len(val))
 
-lora = LoraConfig(r=16, lora_alpha=32, lora_dropout=0.05, task_type="CAUSAL_LM",
+lora = LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.05, task_type="CAUSAL_LM",
                   target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
 BATCH, ACCUM = 2, 8   # 2 examples at a time, 8 times, then one update = 16 examples per step
 total_steps = max(1, int(len(train) / (BATCH * ACCUM) * a.epochs))
