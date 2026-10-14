@@ -276,7 +276,8 @@ function installAunty(B) {
     if (/\b(stupid|idiot|shut up|useless|hate you|dumb|bakwas|bekaar|pagal)\b|\bf+u+c+k|\bbitch/.test(t)) return S('abuse');
     const serious = SERIOUS_RE.test(msg); const selfHarm = SELFHARM_RE.test(msg);
     if (selfHarm || (serious && !hasAmt)) return S('distress', { selfHarm });
-    if (!c.d && !/^(hi|hello|namaste|hey)\b/.test(t) && !/(goal|are you|ai\b|safe|export|delete|help|how does|what is)/.test(t)) return S('no_goal');
+    const loggable = hasAmt && !/\?|\b(can i|should i|afford|worth it|kya main|can we)\b/.test(t);   // a plain spend ("i spent 5000 on party") works even before an income is set
+    if (!c.d && !loggable && !/^(hi|hello|namaste|hey)\b/.test(t) && !/(goal|are you|ai\b|safe|export|delete|help|how does|what is)/.test(t)) return S('no_goal');
     if (/^(that('| i)?s all|that is all|no more|all good|nothing else|i am done|i'm done)\b/.test(t)) return S('smalltalk', { done: true });
     if (/\b(add|another|new|second|one more|more|set|set up|start)\b.{0,25}\bgoals?\b|\bgoals?\b.{0,20}\b(change|set up|setup|new|add)\b|change my goal|\b(change|edit|update|replace)\b.{0,20}\bgoals?\b/.test(t) && !/(explain|maths|math|how (much|many)|what)/.test(t)) return S('goal_setup', { replace: /\b(change|edit|update|replace)\b/.test(t) && c.goals.length <= 1 });
     if (/^(please\s+)?remember\b/.test(t)) return S('remember', { calls: [{ name: 'remember', input: { text: cap(msg.replace(/^\s*(please\s+)?remember( that)?\s*/i, '').trim()) } }] });
@@ -456,7 +457,7 @@ function installAunty(B) {
         const last = ok[ok.length - 1], total = ok.reduce((a, r) => a + r.amount_inr, 0), single = ok.length === 1;
         const lbl = r => r.note || r.category, when = last.is_today ? '' : ` on ${fmtDate(last.date)}`;
         const hasGoal = !!c.goal; const seriousSpend = !!plan.serious || ok.some(r => r.category === 'other' && OTHER_OK.test(r.note || ''));
-        if (!c.d) return { text: `Logged ${R(total)}. Tell me your monthly income and I will show you what is left each day.`, mood: 'neutral', actions: ok.map(r => ({ type: 'spend_logged', spend_id: r.spend_id })) };
+        if (!c.d) return { text: `Logged ${single ? R(total) + ' for ' + lbl(last) : ok.length + ' spends, ' + R(total) + ' in all'}${when}. I do not know your monthly income yet, so I cannot say what is left today. Tell me, like 40k, and I will work out your daily number.`, mood: 'neutral', actions: ok.map(r => ({ type: 'spend_logged', spend_id: r.spend_id })) };
         const leftTxt = last.over_today ? `That puts today ${R(-last.left_today_inr)} over.` : `${R(last.left_today_inr)} left today.`;
         const gd = round1(c.d.goalDays(total));
         let text, mood, popup = null;

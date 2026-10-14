@@ -230,6 +230,19 @@ async function runBackendTests() {
       add(SL, 'validator: a clarifying question must be present', V({ intent: 'ask', question: '' }).ok === false && V({ intent: 'ask', question: 'What was it for?' }).plan.kind === 'slm_ask'); }
   }
 
+  // ===== a user who has not set an income yet can still log spends =====
+  { const NI = 'No income yet';
+    const B = mk(); const s = await signup(B, 'ni@x.com'); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: null });
+    const x1 = await chat(B, s, 'i spent 5000 yesterday on party');
+    add(NI, '"i spent 5000 yesterday on party" is saved even with no income, dated yesterday', x1.tools.length === 1 && x1.tools[0].name === 'log_spend' && x1.tools[0].input.amount_inr === 5000 && B.rawSpends(s.uid).length === 1, x1.b.replies[0].text);
+    add(NI, 'the reply names the item, says it cannot show what is left yet, and asks for the income', /party/i.test(x1.b.replies[0].text) && /income/i.test(x1.b.replies[0].text) && !/null|NaN|undefined/.test(x1.b.replies[0].text), x1.b.replies[0].text);
+    const x2 = await chat(B, s, 'me kal 5000 spent kiya party pe');
+    add(NI, 'Hinglish "me kal 5000 spent kiya party pe" is also saved', x2.tools.length === 1 && x2.tools[0].name === 'log_spend' && x2.tools[0].input.amount_inr === 5000 && B.rawSpends(s.uid).length === 2, x2.b.replies[0].text);
+    const x3 = await chat(B, s, 'hello'); add(NI, '"hello" gets a greeting, not the income prompt', /namaste|hello/i.test(x3.b.replies[0].text) && x3.tools.length === 0, x3.b.replies[0].text);
+    const x4 = await chat(B, s, 'can I buy shoes for 2k?'); add(NI, 'a purchase check needs an income, so it asks for one and saves nothing', x4.tools.length === 0 && /monthly income/i.test(x4.b.replies[0].text) && B.rawSpends(s.uid).length === 2, x4.b.replies[0].text);
+    const x5 = await chat(B, s, 'how am i doing'); add(NI, 'a status question with no income asks for the income', /monthly income/i.test(x5.b.replies[0].text), x5.b.replies[0].text);
+  }
+
   // ===== Aunty evaluation set =====
   const EV = 'Aunty evaluation set (plan + new rows)';
   { const B = mk(); const s = await signup(B, 'a@x.com'); goal(B, s.uid); B.db.update('app_user', B.userById(s.uid), { flow: null });
