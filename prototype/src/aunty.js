@@ -324,8 +324,8 @@ function installAunty(B) {
     // purchase check
     if (hasAmt && (/\?|\b(can i|should i|afford|worth it|kya main|can we)\b/.test(t))) return S('check', { calls: [{ name: 'check_purchase', input: { amount_inr: amounts[0].value, label: noteFrom(msg.replace(/can i|should i|afford|buy|worth it/gi, ' ')) } }] });
     // status
-    if (!hasAmt && /(how am i doing|how.s it going|on track|status|left today|how much (is )?left|my budget|where do i stand|kitna bacha)/.test(t)) {
-      const p = /month/.test(t) ? 'month' : /week/.test(t) ? 'week' : /goal/.test(t) ? 'goal' : 'today';
+    if (!hasAmt && /(how am i doing|how.s it going|on track|status|left today|how much (is )?left|my budget|where do i stand|kitna bacha|\b(is|iss) (hafte|haphte|week|mahine|mahina|month)\b.*\b(kitna|kaisa|kaisi|haal|status|hisaab)\b|\bkitna (kharch|kharcha) (hua|kiya|ho gaya)\b)/.test(t)) {
+      const p = /month|mahin/.test(t) ? 'month' : /week|haft|haph/.test(t) ? 'week' : /goal/.test(t) ? 'goal' : 'today';
       return S('status', { calls: [{ name: 'get_summary', input: { period: p } }, ...(p === 'today' ? [{ name: 'get_summary', input: { period: 'week' } }] : [])], period: p });
     }
     // spends (one or several)
@@ -335,7 +335,7 @@ function installAunty(B) {
       for (const seg of segs) {
         const a = findAmounts(seg)[0]; if (!a) continue;
         const note = noteFrom(seg), cat = MC(seg) || 'other', segWhen = parseWhen(seg.toLowerCase(), today) || when;
-        const looksGiven = /\b(gave|give|paid|sent|send)\b/i.test(seg) && /\b(to|ko)\s+\S+|^\S+$/i.test(note || seg) && cat === 'other' && !OTHER_OK.test(seg);
+        const looksGiven = /\b(gave|give|paid|sent|send|transfer|transferred|wire|wired|bheja|bhejo|bhej)\b/i.test(seg) && /\b(to|ko)\s+\S+|^\S+$/i.test(note || seg) && cat === 'other' && !OTHER_OK.test(seg);
         if (!note || (looksGiven && !OTHER_OK.test(note))) { ask = { amount: a.value, to: (seg.match(/\b(?:to|ko)\s+([A-Za-z]+)/i) || [])[1] || (note && note !== 'Rohan' ? note : null) }; if (!note) ask.to = null; break; }
         calls.push({ name: 'log_spend', input: Object.assign({ amount_inr: a.value, category: cat, note }, segWhen ? { when: segWhen } : {}) });
       }
@@ -376,7 +376,11 @@ function installAunty(B) {
       }
       case 'check_purchase': { const amt = num(o.amount_inr); if (!(amt > 0 && amt <= 1e8)) return bad('bad amount'); if (!digits.some(d => Math.abs(d - amt) < 0.01)) return bad('the amount is not in the user\'s message'); return P('check', { calls: [{ name: 'check_purchase', input: { amount_inr: amt, label: String(o.label || '').replace(/[^\p{L}\p{N} -]/gu, '').slice(0, 40) } }] }); }
       case 'status': { const p = ['today', 'week', 'month', 'goal'].includes(o.period) ? o.period : 'today'; return P('status', { period: p, calls: [{ name: 'get_summary', input: { period: p } }].concat(p === 'today' ? [{ name: 'get_summary', input: { period: 'week' } }] : []) }); }
-      case 'undo': return P('undo', { calls: [{ name: 'undo_last_spend', input: {} }] });
+      case 'undo': {   // a model may only undo the LAST entry, and only when the user asked to undo; never for bulk deletes or pasted "system:" text
+        const wantsUndo = /\b(undo|oops|galat|galti|hata|hatao|hata do|wapas|cancel|delete|remove|mat likh|mat daal|revert)\b/i.test(msg), bulk = /\b(all|everything|every|sab|sabhi|saare|sare|puri|poori)\b/i.test(msg) || /^\s*(system|assistant|developer)\s*:/i.test(msg);
+        if (!wantsUndo || bulk) return bad('the message does not clearly ask to undo the last entry');
+        return P('undo', { calls: [{ name: 'undo_last_spend', input: {} }] });
+      }
       case 'query': {
         const p = per(o.period, { from: today.slice(0, 7) + '-01', to: today, label: 'this month' }), k = cat(o.category), mode = ['total', 'biggest', 'list'].includes(o.mode) ? o.mode : 'total';
         if (mode === 'total' && !k) return P('breakdown', { period: p, calls: [{ name: 'category_breakdown', input: { from: p.from, to: p.to } }] });

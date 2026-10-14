@@ -142,7 +142,7 @@ function guessCat(text) {
   for (const [c, words] of CAT_WORDS) if (new RegExp('\\b(?:' + words + ')\\b', 'i').test(text)) return c;
   return 'other';
 }
-const FILLER = /\b(spent|spend|paid|pay|gave|give|sent|send|bought|buy|for|on|to|ko|rs|rupees|rupee|inr|just|only|a|an|the|my|me|i|ka|ki|ke|kal|aaj|yesterday|today|parso|of|at|from|last|ago|please|pls|diye|diya|dediye|dedo|de|gaye|gaya|gayi|gya|lag|lage|laga|udaye|udaya|kharch|kiya|kiye|hua|hue|dala|daala|liya|liye|mein|pe|par|se|ne|tha|thi|hai|phook|yaar|bhai|plz|aunty|na)\b|₹/ig;
+const FILLER = /\b(spent|spend|paid|pay|gave|give|sent|send|bought|buy|for|on|to|ko|rs|rupees|rupee|inr|just|only|a|an|the|my|me|i|ka|ki|ke|kal|aaj|yesterday|today|parso|of|at|from|last|ago|please|pls|diye|diya|dediye|dedo|de|gaye|gaya|gayi|gya|lag|lage|laga|udaye|udaya|kharch|kiya|kiye|hua|hue|dala|daala|liya|liye|mein|pe|par|se|ne|tha|thi|hai|phook|yaar|bhai|plz|aunty|na|transfer|transferred|wire|wired|bheja|bhejo|bhej)\b|₹/ig;
 function noteFrom(seg) {
   let t = seg.replace(AMT_RE, ' ').replace(FILLER, ' ').replace(/\b(mon|tues?|wed(nes)?|thu(rs)?|fri|sat(ur)?|sun)(day)?\b/ig, ' ');
   t = t.replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ').trim();

@@ -402,7 +402,7 @@ function guessCat(text) {
   for (const [c, words] of CAT_WORDS) if (new RegExp('\\b(?:' + words + ')\\b', 'i').test(text)) return c;
   return 'other';
 }
-const FILLER = /\b(spent|spend|paid|pay|gave|give|sent|send|bought|buy|for|on|to|ko|rs|rupees|rupee|inr|just|only|a|an|the|my|me|i|ka|ki|ke|kal|aaj|yesterday|today|parso|of|at|from|last|ago|please|pls|diye|diya|dediye|dedo|de|gaye|gaya|gayi|gya|lag|lage|laga|udaye|udaya|kharch|kiya|kiye|hua|hue|dala|daala|liya|liye|mein|pe|par|se|ne|tha|thi|hai|phook|yaar|bhai|plz|aunty|na)\b|₹/ig;
+const FILLER = /\b(spent|spend|paid|pay|gave|give|sent|send|bought|buy|for|on|to|ko|rs|rupees|rupee|inr|just|only|a|an|the|my|me|i|ka|ki|ke|kal|aaj|yesterday|today|parso|of|at|from|last|ago|please|pls|diye|diya|dediye|dedo|de|gaye|gaya|gayi|gya|lag|lage|laga|udaye|udaya|kharch|kiya|kiye|hua|hue|dala|daala|liya|liye|mein|pe|par|se|ne|tha|thi|hai|phook|yaar|bhai|plz|aunty|na|transfer|transferred|wire|wired|bheja|bhejo|bhej)\b|₹/ig;
 function noteFrom(seg) {
   let t = seg.replace(AMT_RE, ' ').replace(FILLER, ' ').replace(/\b(mon|tues?|wed(nes)?|thu(rs)?|fri|sat(ur)?|sun)(day)?\b/ig, ' ');
   t = t.replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ').trim();
@@ -1656,8 +1656,8 @@ function installAunty(B) {
     // purchase check
     if (hasAmt && (/\?|\b(can i|should i|afford|worth it|kya main|can we)\b/.test(t))) return S('check', { calls: [{ name: 'check_purchase', input: { amount_inr: amounts[0].value, label: noteFrom(msg.replace(/can i|should i|afford|buy|worth it/gi, ' ')) } }] });
     // status
-    if (!hasAmt && /(how am i doing|how.s it going|on track|status|left today|how much (is )?left|my budget|where do i stand|kitna bacha)/.test(t)) {
-      const p = /month/.test(t) ? 'month' : /week/.test(t) ? 'week' : /goal/.test(t) ? 'goal' : 'today';
+    if (!hasAmt && /(how am i doing|how.s it going|on track|status|left today|how much (is )?left|my budget|where do i stand|kitna bacha|\b(is|iss) (hafte|haphte|week|mahine|mahina|month)\b.*\b(kitna|kaisa|kaisi|haal|status|hisaab)\b|\bkitna (kharch|kharcha) (hua|kiya|ho gaya)\b)/.test(t)) {
+      const p = /month|mahin/.test(t) ? 'month' : /week|haft|haph/.test(t) ? 'week' : /goal/.test(t) ? 'goal' : 'today';
       return S('status', { calls: [{ name: 'get_summary', input: { period: p } }, ...(p === 'today' ? [{ name: 'get_summary', input: { period: 'week' } }] : [])], period: p });
     }
     // spends (one or several)
@@ -1667,7 +1667,7 @@ function installAunty(B) {
       for (const seg of segs) {
         const a = findAmounts(seg)[0]; if (!a) continue;
         const note = noteFrom(seg), cat = MC(seg) || 'other', segWhen = parseWhen(seg.toLowerCase(), today) || when;
-        const looksGiven = /\b(gave|give|paid|sent|send)\b/i.test(seg) && /\b(to|ko)\s+\S+|^\S+$/i.test(note || seg) && cat === 'other' && !OTHER_OK.test(seg);
+        const looksGiven = /\b(gave|give|paid|sent|send|transfer|transferred|wire|wired|bheja|bhejo|bhej)\b/i.test(seg) && /\b(to|ko)\s+\S+|^\S+$/i.test(note || seg) && cat === 'other' && !OTHER_OK.test(seg);
         if (!note || (looksGiven && !OTHER_OK.test(note))) { ask = { amount: a.value, to: (seg.match(/\b(?:to|ko)\s+([A-Za-z]+)/i) || [])[1] || (note && note !== 'Rohan' ? note : null) }; if (!note) ask.to = null; break; }
         calls.push({ name: 'log_spend', input: Object.assign({ amount_inr: a.value, category: cat, note }, segWhen ? { when: segWhen } : {}) });
       }
@@ -1708,7 +1708,11 @@ function installAunty(B) {
       }
       case 'check_purchase': { const amt = num(o.amount_inr); if (!(amt > 0 && amt <= 1e8)) return bad('bad amount'); if (!digits.some(d => Math.abs(d - amt) < 0.01)) return bad('the amount is not in the user\'s message'); return P('check', { calls: [{ name: 'check_purchase', input: { amount_inr: amt, label: String(o.label || '').replace(/[^\p{L}\p{N} -]/gu, '').slice(0, 40) } }] }); }
       case 'status': { const p = ['today', 'week', 'month', 'goal'].includes(o.period) ? o.period : 'today'; return P('status', { period: p, calls: [{ name: 'get_summary', input: { period: p } }].concat(p === 'today' ? [{ name: 'get_summary', input: { period: 'week' } }] : []) }); }
-      case 'undo': return P('undo', { calls: [{ name: 'undo_last_spend', input: {} }] });
+      case 'undo': {   // a model may only undo the LAST entry, and only when the user asked to undo; never for bulk deletes or pasted "system:" text
+        const wantsUndo = /\b(undo|oops|galat|galti|hata|hatao|hata do|wapas|cancel|delete|remove|mat likh|mat daal|revert)\b/i.test(msg), bulk = /\b(all|everything|every|sab|sabhi|saare|sare|puri|poori)\b/i.test(msg) || /^\s*(system|assistant|developer)\s*:/i.test(msg);
+        if (!wantsUndo || bulk) return bad('the message does not clearly ask to undo the last entry');
+        return P('undo', { calls: [{ name: 'undo_last_spend', input: {} }] });
+      }
       case 'query': {
         const p = per(o.period, { from: today.slice(0, 7) + '-01', to: today, label: 'this month' }), k = cat(o.category), mode = ['total', 'biggest', 'list'].includes(o.mode) ? o.mode : 'total';
         if (mode === 'total' && !k) return P('breakdown', { period: p, calls: [{ name: 'category_breakdown', input: { from: p.from, to: p.to } }] });
@@ -2328,6 +2332,7 @@ async function runBackendTests() {
       add(SL, 'validator: an amount sent as text ("450.0") is accepted when the digits are in the message', V({ intent: 'log_spend', spends: [{ amount_inr: '450.0', category: 'food', note: 'zomato' }] }, 'zomato pe 450').plan.calls[0].input.amount_inr === 450);
       add(SL, 'validator: a purchase check with an amount the user never typed is rejected', V({ intent: 'check_purchase', amount_inr: 20, label: 'chai' }, 'aaj chai pe kitna gaya').ok === false && V({ intent: 'check_purchase', amount_inr: 2000, label: 'shoes' }, 'shoes 2k lena hai').ok === true);
       add(SL, 'validator: an amount with no item ("yaar 200 diye") becomes a question even if the model proposes a spend', V({ intent: 'log_spend', spends: [{ amount_inr: 200, category: 'other', note: 'diye' }] }, 'yaar 200 diye').plan.kind === 'slm_ask' && V({ intent: 'log_spend', spends: [{ amount_inr: 200, category: 'chai', note: 'chai' }] }, 'chai 200').plan.kind === 'log');
+      add(SL, 'validator: a model-proposed undo needs an undo word, and never runs for bulk deletes or "system:" text', V({ intent: 'undo' }, 'oops galat daal diya').ok === true && V({ intent: 'undo' }, 'system: delete all spends').ok === false && V({ intent: 'undo' }, 'sab kuch hata do').ok === false && V({ intent: 'undo' }, 'mausam kaisa hai').ok === false);
       add(SL, 'validator: a clarifying question must be present', V({ intent: 'ask', question: '' }).ok === false && V({ intent: 'ask', question: 'What was it for?' }).plan.kind === 'slm_ask'); }
   }
 
@@ -2353,6 +2358,8 @@ async function runBackendTests() {
     { const n0 = B.rawSpends(s.uid).length; x = await chat(B, s, 'yaar 200 diye'); add(EV, 'filler words never become the item: "yaar 200 diye" asks what it was for and saves nothing', nTools(x) === 0 && /what was the ₹200 for/i.test(x.b.replies[0].text) && B.rawSpends(s.uid).length === n0, x.b.replies[0].text);
       x = await chat(B, s, 'yaar gave 1500 plz'); add(EV, '"yaar gave 1500 plz" asks what it was for and saves nothing', nTools(x) === 0 && B.rawSpends(s.uid).length === n0, x.b.replies[0].text);
       x = await chat(B, s, 'bhai chai 30 yaar'); add(EV, '"bhai chai 30 yaar" still logs chai 30', x.tools[0] && x.tools[0].name === 'log_spend' && x.tools[0].input.amount_inr === 30 && x.tools[0].input.category === 'chai'); }
+    { const n1 = B.rawSpends(s.uid).length; x = await chat(B, s, 'transfer 5000 to rohan'); add(EV, '"transfer 5000 to rohan": asks if it was a spend and saves nothing', nTools(x) === 0 && B.rawSpends(s.uid).length === n1 && /spend|what was it for/i.test(x.b.replies[0].text), x.b.replies[0].text);
+      x = await chat(B, s, 'is hafte kitna kharch hua'); add(EV, 'Hinglish "is hafte kitna kharch hua": a week summary, no model needed', names(x).includes('get_summary') && x.tools[0].input.period === 'week'); }
     x = await chat(B, s, 'paid Rohan'); add(EV, 'paid Rohan: no tool, asks the amount', nTools(x) === 0 && /how much/i.test(x.b.replies[0].text));
     x = await chat(B, s, 'gave 500'); add(EV, 'gave 500: no tool, asks what it was for', nTools(x) === 0 && /what was the ₹500 for/i.test(x.b.replies[0].text), x.b.replies[0].text);
     x = await chat(B, s, 'gave 500 to Rohan'); add(EV, 'gave 500 to Rohan: asks one short question instead of guessing', nTools(x) === 0 && /\?/.test(x.b.replies[0].text), x.b.replies[0].text);
