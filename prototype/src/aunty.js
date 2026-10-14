@@ -67,6 +67,16 @@ function parsePeriod(t, today) {
   return null;
 }
 
+// A goal sentence like "mujhe apni wedding ke liye save karna hai... kharcha hoga around 5 lakh" -> { name: 'Wedding', cost: 500000 }.
+// The cost is only taken when the amount is written as digits (not a duration like "6 months").
+function goalPhrase(text) {
+  const raw = String(text || '').trim().replace(/^(hey|hi|hello|well|so|um|ok|okay|actually)[,.!\s]+/i, ''), AM = /(?:around|approx\.?|approximately|about|lagbhag|almost)?\s*(?:₹|rs\.?\s*)?(\d[\d,]*(?:\.\d+)?)\s*(k|lakh|lacs?|lac|l)?(?![a-z0-9])(?!\s*(?:months?|mahine|mahina|days?|din|weeks?|years?|saal|yrs?))/i;
+  const m = raw.match(AM); let cost = null;
+  if (m) { const n = parseFloat(m[1].replace(/,/g, '')), u = (m[2] || '').toLowerCase(), v = u === 'k' ? n * 1e3 : u ? n * 1e5 : n; if (v >= 1000 && v <= 1e8) cost = v; }
+  const first = raw.split(/[.…!?]+/).map(s => s.trim()).find(s => s.length >= 3) || raw;
+  return { name: cleanGoalName(cost ? first.replace(AM, ' ') : first), cost };
+}
+
 function installAunty(B) {
   const db = B.db, cfg = B.cfg;
   const now = () => B.clock.now();
@@ -88,11 +98,12 @@ function installAunty(B) {
   const GREET = (n) => `Namaste ${n}! I am Hisaab Aunty, and I turn "where did my money go?" into "oh, so that is where."`;
   B.startGoalFlow = (uid, first, opts) => {
     const u = B.userById(uid), needIncome = !first && u.income_paise == null, mode = (first || needIncome) ? 'full' : 'goal';   // a goal needs an income to be worked out, so ask for it first when it is missing
-    const nm = opts && opts.name ? cleanGoalName(opts.name) : null, data = {}; if (nm) { data.name = nm; data.icon = goalIcon(nm); }   // "saving for my wedding" already names the goal
-    db.update('app_user', u, { flow: { mode, step: mode === 'full' ? 'income' : nm ? 'cost' : 'goal', tries: 0, data, replace: !!(opts && opts.replace) } });
+    const nm = opts && opts.name ? cleanGoalName(opts.name) : null, data = {}; if (nm) { data.name = nm; data.icon = goalIcon(nm); if (opts.cost) data.cost = opts.cost; }   // "saving for my wedding, about 5 lakh" already names the goal and its cost
+    const startStep = nm ? (data.cost ? 'months' : 'cost') : 'goal';
+    db.update('app_user', u, { flow: { mode, step: mode === 'full' ? 'income' : startStep, tries: 0, data, replace: !!(opts && opts.replace) } });
     if (first) { B.addAunty(uid, GREET(u.display_name.split(' ')[0]), 'happy', { tpl: 'greet', flow: 'greet' }); B.addAunty(uid, Q.income, 'neutral', { flow: 'income' }); }
     else if (needIncome) { B.addAunty(uid, 'Happy to set up a goal! First, what is your monthly income? Salary or allowance is fine. It is how I work out what you can really save. Type "cancel" any time to stop.', 'happy', { flow: 'income' }); }
-    else if (nm) { B.addAunty(uid, `${data.icon} ${nm}, lovely! Type "cancel" any time to stop.`, 'happy', { flow: 'cost' }); B.addAunty(uid, Q.cost, 'neutral', { flow: 'cost' }); }
+    else if (nm) { B.addAunty(uid, `${data.icon} ${nm}, lovely! Type "cancel" any time to stop.`, 'happy', { flow: startStep }); B.addAunty(uid, data.cost ? `About ${R(data.cost)}, noted. ${Q.months}` : Q.cost, 'neutral', { flow: startStep, ui: data.cost ? { type: 'slider' } : null }); }
     else { B.addAunty(uid, opts && opts.replace ? 'Chalo, let us redo your goal. Type "cancel" any time to keep the old one.' : B.ctxFor(uid).goals.length ? 'Chalo, another goal! Type "cancel" any time to stop.' : 'Chalo, let us set your goal! Type "cancel" any time to stop.','happy', { flow: 'goal' }); B.addAunty(uid, Q.goal.split(' Or skip')[0], 'neutral', { flow: 'goal', ui: { type: 'skip', label: 'Never mind', text: 'cancel' } }); }
   };
   function handleFlow(uid, text) {
@@ -104,7 +115,7 @@ function installAunty(B) {
     if (f.step === 'income') { const x = parseAmount(t); if (x == null || x <= 0 || x > 1e8) return retry('I could not read that amount.'); f.data.income = x; }
     else if (f.step === 'goal') {
       if (skipped) f.data.noGoal = true;
-      else { if (!t || t.length > 140) return retry('A short description please.'); f.data.name = cleanGoalName(t); f.data.icon = goalIcon(f.data.name); ack = `${f.data.icon} ${f.data.name}. `; }
+      else { if (!t || t.length > 200) return retry('A short description please.'); const gp = goalPhrase(t); f.data.name = gp.name; if (gp.cost) f.data.cost = gp.cost; f.data.icon = goalIcon(f.data.name); ack = `${f.data.icon} ${f.data.name}. `; }
     }
     else if (f.step === 'cost') { const x = parseAmount(t); if (!x || x <= 0 || x > 1e8) return retry('I could not read that amount.'); f.data.cost = x; }
     else if (f.step === 'months') { const m = parseDuration(t); if (m == null || !(m >= 0.25) || m > 600) return retry('Pick a duration of at least a week, like 6 months or 90 days.'); f.data.months = m; }
@@ -112,6 +123,7 @@ function installAunty(B) {
     else { const x = parseAmount(t); if (x == null || x < 0 || x > 1e9) return retry('I could not read that amount, or tap skip.'); f.data[f.step] = x; }
     let next = steps[steps.indexOf(f.step) + 1]; if (f.step === 'goal' && f.data.noGoal) next = null;
     if (next === 'goal' && f.data.name) { next = 'cost'; ack = `${f.data.icon} ${f.data.name}. `; }   // the goal was already named in the request
+    if (next === 'cost' && f.data.cost) { next = 'months'; ack += `About ${R(f.data.cost)}, noted. `; }   // and so was the amount
     if (next) { f.step = next; f.tries = 0; db.update('app_user', u, { flow: f }); return { text: ack + Q[next], mood: 'neutral', ui: uiFor(next) }; }
     // all answered: save income and extras, then the goal (if any)
     const d0 = f.data, today = B.today(u), patch = {};
@@ -368,7 +380,7 @@ function installAunty(B) {
       const change = /\b(change|edit|update|replace|badal\w*|badlo)\b.{0,20}\bgoals?\b|\bgoals?\b.{0,20}\b(change|badal\w*|badlo|edit|update)\b/.test(t);
       const create = /\b(add|another|new|second|one more|more|set|set up|start)\b.{0,25}\bgoals?\b|\bgoals?\b.{0,20}\b(set up|setup|new|add)\b|\bgoals?\b.{0,30}\b(banana|banao|bana do|banani|set kar\w*|add kar\w*|shuru|jodna|jodo|create|make|chahiye|lena hai|rakhna hai|rakhni hai)\b|\b(naya|nayi|ek aur|ek or|dusra|doosra)\b.{0,15}\bgoals?\b|\b(create|make|want|need|build|begin)\b.{0,20}\b(a |an |one |my )?(savings? )?goals?\b/.test(t);
       const sv = t.match(/\b(?:saving|save|saving up|bachat)\b(?:\s+\d[\d,.]*\s*(?:k|lakh)?)?\s+for\s+(?:a |an |my |the |ek )?([a-z][a-z ]{1,28}?)\s*[.!?]*$/) || t.match(/^(?:mujhe |mera |main |mai )?(?:ek )?([a-z][a-z ]{1,24}?) ke liye (?:save|bachat|paisa jama|paise jama|paise bachane)/);
-      if ((create || change || sv) && !askingAbout) return S('goal_setup', { replace: change && c.goals.length <= 1, name: sv ? sv[1].trim() : null });
+      if ((create || change || sv) && !askingAbout) return S('goal_setup', { replace: change && c.goals.length <= 1, name: sv ? sv[1].trim() : null, cost: sv ? goalPhrase(msg).cost : null });
     }
     if (/^(please\s+)?remember\b/.test(t)) return S('remember', { calls: [{ name: 'remember', input: { text: cap(msg.replace(/^\s*(please\s+)?remember( that)?\s*/i, '').trim()) } }] });
     if (/what do you (remember|know)|my memories|what.s in your memory/.test(t)) return S('memories', { calls: [{ name: 'list_memories', input: {} }] });
@@ -717,7 +729,7 @@ function installAunty(B) {
     if (!c0.d && (plan.calls || []).some(x => NEEDS_BUDGET.has(x.name))) plan = { kind: 'no_goal', calls: [] };   // a daily budget needs an income, so ask for it
     turn.trace.plan = plan.kind;
     // goal change is handed to the scripted flow
-    if (plan.kind === 'goal_setup') { B.logAI(uid, 'chat', cfg.chatModel, inText, '[goal_setup]', 400, 'goal_setup'); B.startGoalFlow(uid, false, { replace: plan.replace, name: plan.name }); B.lastTrace = turn.trace; turn.trace.final = '[goal_setup]'; return { replies: [], actions: [], summary_changed: false, flow_started: true }; }
+    if (plan.kind === 'goal_setup') { B.logAI(uid, 'chat', cfg.chatModel, inText, '[goal_setup]', 400, 'goal_setup'); B.startGoalFlow(uid, false, { replace: plan.replace, name: plan.name, cost: plan.cost }); B.lastTrace = turn.trace; turn.trace.final = '[goal_setup]'; return { replies: [], actions: [], summary_changed: false, flow_started: true }; }
     // tool loop, max 6 rounds
     const results = []; let calls = plan.calls;
     if (plan.needList) {   // forget needs a memory id: round 1 lists, round 2 forgets

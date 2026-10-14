@@ -266,7 +266,9 @@ function cleanGoalName(text) {
   t = t.replace(/^(hey|hi|hello|well|so|um|ok|okay|actually)[,.!\s]+/i, '').replace(/^[.,!\s]+/, '');
   const lead = [/^(i\s*am|i'm|im|am|we\s*are|we're)\s+(saving(\s+up)?|planning|trying|going)\s+(for|to\s+(buy|get|go\s+(on|to)|save\s+for))\s+/i, /^(i|we)\s+(want|wanna|need|plan)\s+to\s+(save(\s+up)?(\s+for)?|buy|get|go\s+(on|to))\s+/i, /^(saving(\s+up)?|save)\s+(for\s+)?/i, /^(for|towards|toward)\s+/i];
   for (let i = 0; i < 2; i++) lead.forEach(re => { t = t.replace(re, ''); });
+  t = t.replace(/^(mujhe|mujhko|main|mai|hum|mera|meri|mere)\s+/i, '').replace(/^(apni|apna|apne|meri|mera|mere|ek)\s+/i, '');   // Hinglish: "mujhe apni wedding ke liye save karna hai"
   t = t.replace(/^(my|a|an|the|our|some)\s+/i, '');
+  t = t.replace(/^(.{2,}?)\s+(?:ke|k)\s+li[yk]e\b.*$/i, '$1');   // "wedding ke liye save karna hai" -> "wedding"
   for (let i = 0; i < 4; i++) t = t.replace(/[\s,]+(here|only|now|please|pls|yaar|bro|just|actually|na|hai|basically)\s*$/i, '');
   t = t.replace(/\s+/g, ' ').trim();
   if (!t) return String(text || '').trim().slice(0, 40);
