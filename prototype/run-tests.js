@@ -1,6 +1,6 @@
 const vm = require('vm'), fs = require('fs'), http = require('http'), { spawn, spawnSync } = require('child_process');
 const files = ['logic', 'backend', 'aunty', 'llm', 'tests'].map(f => fs.readFileSync('src/' + f + '.js', 'utf8')).join('\n');
-vm.runInThisContext(files + '\nglobalThis.__t={runLogicTests,runBackendTests,makeLLM};');
+vm.runInThisContext(files + '\nglobalThis.__t={runLogicTests,runBackendTests,makeLLM,createBackend,createDB,installAunty};');
 
 // end-to-end check of the LLM proxy against a fake OpenAI-compatible upstream (Node only)
 async function proxyTests() {
@@ -53,8 +53,27 @@ async function proxyTests() {
   await new Promise(res => { p2.once('exit', res); p2.kill(); }); [upA, upB].forEach(u => { u.closeAllConnections && u.closeAllConnections(); u.close(); }); try { fs.unlinkSync(mf); } catch (e) { }
   return T;
 }
+// the phone's request helper: an expired login token with several requests at once must refresh ONCE and keep the user logged in
+async function sessionTests() {
+  const T = []; const add = (name, ok, detail) => T.push({ group: 'Login session', name, ok: !!ok, detail: detail == null ? '' : String(detail) });
+  const ui = fs.readFileSync('src/ui-phone.js', 'utf8'); const start = ui.indexOf('let refreshInFlight'), end = ui.indexOf('function forceLogout');
+  add('the phone code has the single-refresh guard', start > 0 && end > start);
+  if (start < 0) return T;
+  const clock = { t: Date.UTC(2026, 9, 11, 6, 30), now() { return this.t; } }; const B2 = __t.createBackend({ db: __t.createDB(null), clock, cfg: {} }); __t.installAunty(B2);
+  const r = await B2.api('POST', '/v1/auth/signup', { body: { email: 'a@x.com', password: 'secret123', name: 'Priya', city: 'Pune', region_flavour: 'none', age_confirmed: true, consent_version: '2026-10' } });
+  globalThis.B = B2; globalThis.S = { access: r.body.access_token, refresh: r.body.refresh_token }; globalThis.App = { offline: false, user: r.body.user }; globalThis.saveS = () => { }; globalThis.refreshDash = undefined; globalThis.loggedOut = false;
+  globalThis.forceLogout = () => { globalThis.S = null; globalThis.App.user = null; globalThis.loggedOut = true; };
+  vm.runInThisContext(ui.slice(start, end) + '\nglobalThis.__api = api;');
+  clock.t += 20 * 60 * 1000;   // the access token (15 minutes) has expired
+  let res; try { res = await Promise.all([globalThis.__api('GET', '/me'), globalThis.__api('GET', '/goals'), globalThis.__api('GET', '/categories'), globalThis.__api('GET', '/chat/history')]); } catch (e) { res = [{ status: 'crash: ' + e.message }]; }
+  add('four requests at once with an expired token all succeed', res.length === 4 && res.every(x => x.status === 200), res.map(x => x.status).join(','));
+  add('the user is NOT logged out by the parallel refresh', !globalThis.loggedOut && !!globalThis.S);
+  const again = await globalThis.__api('GET', '/me'); add('the session keeps working afterwards', again.status === 200, again.status);
+  clock.t += 20 * 60 * 1000; const later = await Promise.all([globalThis.__api('GET', '/me'), globalThis.__api('GET', '/goals')]); add('it also works the next time the token expires', later.every(x => x.status === 200) && !globalThis.loggedOut, later.map(x => x.status).join(','));
+  return T;
+}
 (async () => {
-  const a = __t.runLogicTests(), b = await __t.runBackendTests(), c = await proxyTests(); const all = a.concat(b, c);
+  const a = __t.runLogicTests(), b = await __t.runBackendTests(), c = await proxyTests(), d = await sessionTests(); const all = a.concat(b, c, d);
   all.filter(t => !t.ok).forEach(t => console.log('FAIL [' + t.group + '] ' + t.name + '\n     -> ' + t.detail));
   console.log(all.filter(t => t.ok).length + '/' + all.length + ' passed');
   setTimeout(() => process.exit(0), 200);

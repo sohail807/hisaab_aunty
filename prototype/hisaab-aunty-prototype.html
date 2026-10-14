@@ -2682,13 +2682,24 @@ const catIcon = c => { const x = (App.cats || []).find(k => k.slug === c); retur
 async function loadCats(month) { const r = await api('GET', '/categories' + (month ? '?month=' + month : '')); if (r.status === 200) { App.cats = r.body.categories; return r.body; } return null; }
 const nowIso = () => new Date(clock.now()).toISOString();
 
+let refreshInFlight = null;   // only ONE refresh at a time: refresh tokens rotate, so two parallel refreshes reuse the same token and the server logs you out everywhere
+function refreshSession() {
+  if (!refreshInFlight) refreshInFlight = (async () => {
+    if (!S || !S.refresh) return false;
+    const rr = await B.api('POST', '/v1/auth/refresh', { body: { refresh_token: S.refresh } });
+    if (rr.status === 200) { S.access = rr.body.access_token; S.refresh = rr.body.refresh_token; saveS(); return true; }
+    return false;
+  })().finally(() => { refreshInFlight = null; });
+  return refreshInFlight;
+}
 async function api(method, path, body, headers) {
   if (App.offline) return { status: 0, body: { error: { code: 'offline', message: 'You are offline.' } } };
-  let r = await B.api(method, '/v1' + path, { token: S && S.access, body, headers });
+  const used = S && S.access;
+  let r = await B.api(method, '/v1' + path, { token: used, body, headers });
   if (r.status === 401 && S && S.refresh && !path.startsWith('/auth/')) {
-    const rr = await B.api('POST', '/v1/auth/refresh', { body: { refresh_token: S.refresh } });
-    if (rr.status === 200) { S.access = rr.body.access_token; S.refresh = rr.body.refresh_token; saveS(); r = await B.api(method, '/v1' + path, { token: S.access, body, headers }); }
-    else { forceLogout(); }
+    const ok = (S && S.access !== used) ? true : await refreshSession();   // another request may already have refreshed: then just retry with the new token
+    if (ok && S) r = await B.api(method, '/v1' + path, { token: S.access, body, headers });
+    else if (!ok) forceLogout();
   }
   if (typeof refreshDash === 'function') refreshDash();
   return r;
@@ -2767,7 +2778,7 @@ async function doLogin(email, pw) {
 async function enterApp() {
   App.rendered = new Set(); App.prevLeft = null; App.tab = 'chat';
   const me = await api('GET', '/me'); if (me.status !== 200) return showWelcome(); App.user = me.body.user; App.flavours = me.body.flavours;
-  phone().innerHTML = `<div class="hdr"><div id="hdrFace" style="width:44px">${faceSVG('neutral')}</div><div class="sp"><div class="ttl">Hisaab Aunty</div><div class="sub" id="hdrSub">&nbsp;</div></div><span id="hdrPill"></span><button class="icon-btn" data-act="open-settings" aria-label="Settings">&#9881;</button></div>
+  phone().innerHTML = `<div class="hdr"><div class="sp"><div class="ttl">Hisaab Aunty</div><div class="sub" id="hdrSub">&nbsp;</div></div><span id="hdrPill"></span><button class="icon-btn" data-act="open-settings" aria-label="Settings">&#9881;</button></div>
   <div class="panels"><div class="panel" id="p-spend"></div><div class="panel" id="p-chat"></div><div class="panel" id="p-ledger"></div><div class="panel" id="p-goal"></div></div><button class="fab" id="fab" data-act="fab" aria-label="Add expense or income" style="display:none">+</button>
   <div class="tabbar" role="tablist"><button data-act="tab" data-tab="spend"><span class="ti">&#9684;</span>Spend</button><button data-act="tab" data-tab="chat"><span class="ti">&#128172;</span>Aunty</button><button data-act="tab" data-tab="ledger"><span class="ti">&#9776;</span>Ledger</button><button data-act="tab" data-tab="goal"><span class="ti">&#9733;</span>Goal</button></div><div id="overlay"></div>`;
   applyTheme(); buildSpendShell(); buildChat(); $('#p-goal').innerHTML = '';
