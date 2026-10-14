@@ -245,6 +245,18 @@ async function runBackendTests() {
     { const o = await run('should I invest 5000 in sip'); add(RW, 'asking for investment advice is still declined and saves nothing', o.ds === 0 && /outside what I do/.test(o.text), o.text); }
   }
 
+  // ===== questions about spending work before an income is set, in many phrasings =====
+  { const QN = 'Questions without an income';
+    const B = mk(); const s = await signup(B, 'qn@x.com'); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: null });
+    spend(B, s.uid, 30, 'chai', 0, 'chai'); spend(B, s.uid, 350, 'food', 1, 'swiggy'); spend(B, s.uid, 90, 'ride', 3, 'auto'); spend(B, s.uid, 1200, 'shop', 9, 'shoes'); spend(B, s.uid, 500, 'food', 40, 'zomato');
+    const n0 = B.rawSpends(s.uid).length; const askQ = async (m) => { const x = await chat(B, s, m); return { x, text: x.b.replies[0].text, tools: x.tools.map(t => t.name) }; };
+    for (const [m, tool, re] of [['mera is mahine kitna kitna kharcha hua?', 'query_spends', /shoes|1,200/], ['is mahine ke kharche dikhao', 'query_spends', /shoes|1,200/], ['pichle 7 din ke kharche', 'query_spends', /swiggy|auto|chai/], ['october ke kharche', 'query_spends', /shoes|1,200/], ['show september expenses', 'query_spends', /zomato|500/], ['last 30 days expenses', 'query_spends', /shoes|1,200|zomato/], ['kal kya kya kharch kiya', 'query_spends', /swiggy/], ['sabse bada kharcha', 'query_spends', /shoes|1,200/], ['swiggy pe kitna gaya', 'query_spends', /350/], ['category wise kharcha', 'category_breakdown', /1,200|Shopping/], ['mere accounts dikhao', 'get_accounts', /./]]) {
+      const o = await askQ(m); add(QN, `"${m}" is answered from the spend records, no income needed`, o.tools.includes(tool) && re.test(o.text) && !/monthly income first/.test(o.text), o.text); }
+    { const o = await askQ('kitna bacha hai'); add(QN, '"kitna bacha hai" says what was spent and asks for the income for the rest', /spent/.test(o.text) && /monthly income/.test(o.text), o.text); }
+    for (const m of ['can I buy shoes for 2k?', 'goal kab tak hoga', 'what if I skip delivery for two weeks']) { const o = await askQ(m); add(QN, `"${m}" needs a budget, so it asks for the income`, /monthly income first/.test(o.text), o.text); }
+    add(QN, 'none of these questions saved or removed a spend', B.rawSpends(s.uid).length === n0);
+  }
+
   // ===== a user who has not set an income yet can still log spends =====
   { const NI = 'No income yet';
     const B = mk(); const s = await signup(B, 'ni@x.com'); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: null });

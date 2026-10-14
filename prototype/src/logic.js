@@ -122,7 +122,7 @@ function verdict(a, d) {
 // ---------- spend parsing (used before the AI, and as the fallback after) ----------
 const AMT_RE = /(\d{1,3}(?:,\d{2,3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(k|lakh|lacs?|lac|l)?(?:\s?(?:rs|rupees?|rupaye|inr))?(?![a-z0-9])/ig;
 // numbers that are dates or "how long ago", not money: "3 din pehle", "2 weeks ago", "5th oct", "12 october"
-const DATE_NUM_RE = /\b\d+\s*(?:din|days?|hafte|haphte|weeks?|mahine|mahina|months?)\s*(?:pehle|pehle ka|ago|back)\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/ig;
+const DATE_NUM_RE = /\b\d+\s*(?:din|days?|hafte|haphte|weeks?|mahine|mahina|months?)\s*(?:pehle|pehle ka|ago|back)\b|\b(?:last|past|pichle|pichhle|previous|next|agle)\s+\d+\s*(?:din|days?|hafte|haphte|weeks?|mahine|mahina|months?)\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/ig;
 function findAmounts(text) {
   text = String(text).replace(DATE_NUM_RE, s => ' '.repeat(s.length));
   const out = []; let m; AMT_RE.lastIndex = 0;

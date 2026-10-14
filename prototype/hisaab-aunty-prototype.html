@@ -382,7 +382,7 @@ function verdict(a, d) {
 // ---------- spend parsing (used before the AI, and as the fallback after) ----------
 const AMT_RE = /(\d{1,3}(?:,\d{2,3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(k|lakh|lacs?|lac|l)?(?:\s?(?:rs|rupees?|rupaye|inr))?(?![a-z0-9])/ig;
 // numbers that are dates or "how long ago", not money: "3 din pehle", "2 weeks ago", "5th oct", "12 october"
-const DATE_NUM_RE = /\b\d+\s*(?:din|days?|hafte|haphte|weeks?|mahine|mahina|months?)\s*(?:pehle|pehle ka|ago|back)\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/ig;
+const DATE_NUM_RE = /\b\d+\s*(?:din|days?|hafte|haphte|weeks?|mahine|mahina|months?)\s*(?:pehle|pehle ka|ago|back)\b|\b(?:last|past|pichle|pichhle|previous|next|agle)\s+\d+\s*(?:din|days?|hafte|haphte|weeks?|mahine|mahina|months?)\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/ig;
 function findAmounts(text) {
   text = String(text).replace(DATE_NUM_RE, s => ' '.repeat(s.length));
   const out = []; let m; AMT_RE.lastIndex = 0;
@@ -1383,12 +1383,24 @@ function parsePeriod(t, today) {
   const dom = +today.slice(8);
   let m;
   if ((m = t.match(/since\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)/))) { const target = WEEKDAYS.indexOf(m[1]); const delta = (dow(today) - target + 7) % 7; return { from: addDays(today, -delta), to: today, label: 'since ' + cap(m[1]) }; }
-  if (/\blast month\b/.test(t)) { const first = today.slice(0, 7) + '-01'; const to = addDays(first, -1); return { from: to.slice(0, 7) + '-01', to, label: 'last month' }; }
-  if (/\blast week\b/.test(t)) return { from: addDays(today, -13), to: addDays(today, -7), label: 'the week before' };
+  // "last 30 days", "pichle 10 din", "past 2 weeks"
+  if ((m = t.match(/\b(?:last|past|pichle|pichhle|previous)\s+(\d{1,3})\s*(days?|din|weeks?|hafte|haphte|months?|mahine)\b/))) { const n = +m[1] * (/^(week|hafte|haphte)/.test(m[2]) ? 7 : /^(month|mahine)/.test(m[2]) ? 30 : 1); if (n >= 1 && n <= 400) return { from: addDays(today, -(n - 1)), to: today, label: 'the last ' + n + ' days' }; }
+  if (/\b(?:last month|previous month|pichle mahine|pichhle mahine|pichle mahina|pichhle mahina|pichli mahine)\b/.test(t)) { const first = today.slice(0, 7) + '-01'; const to = addDays(first, -1); return { from: to.slice(0, 7) + '-01', to, label: 'last month' }; }
+  if (/\b(?:last week|previous week|pichle hafte|pichhle hafte|pichle haphte|pichhle haphte)\b/.test(t)) return { from: addDays(today, -13), to: addDays(today, -7), label: 'the week before' };
+  if (/\b(parso|day before yesterday)\b/.test(t)) return { from: addDays(today, -2), to: addDays(today, -2), label: 'the day before yesterday' };
   if (/\b(yesterday|kal)\b/.test(t)) return { from: addDays(today, -1), to: addDays(today, -1), label: 'yesterday' };
-  if (/\btoday|aaj\b/.test(t)) return { from: today, to: today, label: 'today' };
-  if (/\b(this week|last 7 days|past week|week)\b/.test(t)) return { from: addDays(today, -6), to: today, label: 'the last 7 days' };
-  if (/\b(this month|month)\b/.test(t)) return { from: today.slice(0, 7) + '-01', to: today, label: 'this month' };
+  if (/\b(today|aaj)\b/.test(t)) return { from: today, to: today, label: 'today' };
+  // a named month: "october", "in oct", "october mein"
+  if ((m = t.match(/\b(jan(?:uary)?|feb(?:ruary)?|march|apr(?:il)?|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b(?!\s*\d)/)) && !/\b\d{1,2}(st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/.test(t)) {
+    const mi = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m[1].slice(0, 3)); let y = +today.slice(0, 4);
+    if (mi + 1 > +today.slice(5, 7)) y -= 1;   // a month later in the year than today means last year
+    const from = `${y}-${String(mi + 1).padStart(2, '0')}-01`, last = new Date(Date.UTC(y, mi + 1, 0)).getUTCDate(), to0 = `${y}-${String(mi + 1).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
+    return { from, to: to0 > today ? today : to0, label: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][mi] };
+  }
+  if (/\b(this year|is saal|iss saal)\b/.test(t)) return { from: today.slice(0, 4) + '-01-01', to: today, label: 'this year' };
+  if (/\b(all time|overall|so far|till now|till date|ab tak|abhi tak|since i started)\b/.test(t)) return { from: addDays(today, -400), to: today, label: 'all time' };
+  if (/\b(this week|is hafte|iss hafte|is haphte|iss haphte|last 7 days|past week|week|hafte|haphte)\b/.test(t)) return { from: addDays(today, -6), to: today, label: 'the last 7 days' };
+  if (/\b(this month|is mahine|iss mahine|is mahina|iss mahina|mahine|mahina|month)\b/.test(t)) return { from: today.slice(0, 7) + '-01', to: today, label: 'this month' };
   return null;
 }
 
@@ -1496,7 +1508,13 @@ function installAunty(B) {
     },
     get_summary(uid, i) {
       const period = ['today', 'week', 'month', 'goal'].includes(i.period) ? i.period : 'today';
-      const c = B.ctxFor(uid); if (!c.d || (period === 'goal' && !c.goal)) return { error: 'no_goal' }; const d = c.d;
+      const c = B.ctxFor(uid); if (period === 'goal' && !c.goal) return { error: 'no_goal' };
+      if (!c.d) {   // no income yet: say what was spent, just without a budget
+        const from = period === 'today' ? c.today : period === 'week' ? addDays(c.today, -6) : c.today.slice(0, 7) + '-01';
+        const rows = c.spends.filter(x => x.dk >= from && x.dk <= c.today), total = rows.reduce((a, x) => a + x.amount, 0), bd = breakdown(c.spends, from, c.today)[0];
+        return { period, no_budget: true, spent_inr: r2(total), count: rows.length, top_category: bd ? bd.category : null, top_category_inr: bd ? r2(bd.total) : 0 };
+      }
+      const d = c.d;
       const base = Object.assign({ period }, goalBits(c));
       if (period === 'today') return Object.assign(base, { spent_inr: r2(d.spentToday), budget_inr: r2(d.dailyBudget), left_today_inr: r2(d.leftToday), over_today: d.leftToday < 0 });
       if (period === 'week') { const bd = breakdown(c.spends, addDays(c.today, -6), c.today)[0]; return Object.assign(base, { spent_inr: r2(d.weekTotal), budget_inr: r2(d.weekBudget), left_inr: r2(d.weekBudget - d.weekTotal), top_category: bd ? bd.category : null, top_category_inr: bd ? r2(bd.total) : 0 }); }
@@ -1616,6 +1634,7 @@ function installAunty(B) {
     for (let i = 0; i < 4; i++) { const n = m.replace(LEAD_FILL, '').replace(TRAIL_FILL, m.endsWith('?') ? '?' : ''); if (n === m || !n.replace(/[?!.,\s]/g, '')) break; m = n.trim(); }
     return m || String(msg).trim();
   }
+  const NEEDS_BUDGET = new Set(['check_purchase', 'what_if', 'get_goal_details']);   // tools whose answer is built on the daily budget
   // words that decide whether an amount is money going OUT (a spend), money coming IN (income), a loan, or a settings change
   const OUT_VERB = /\b(spent|paid|pay|bought|ordered|kharch\w*|udaye|udaya)\b/i;
   const STRONG_IN = /\b(credited|deposited|refunded|reimbursed|earned|received|recieved)\b/i;
@@ -1645,8 +1664,8 @@ function installAunty(B) {
     if (/\b(stupid|idiot|shut up|useless|hate you|dumb|bakwas|bekaar|pagal)\b|\bf+u+c+k|\bbitch/.test(t)) return S('abuse');
     const serious = SERIOUS_RE.test(msg); const selfHarm = SELFHARM_RE.test(msg);
     if (selfHarm || (serious && !hasAmt)) return S('distress', { selfHarm });
-    const loggable = hasAmt && !/\?|\b(can i|should i|afford|worth it|kya main|can we)\b/.test(t);   // a plain spend ("i spent 5000 on party") works even before an income is set
-    if (!c.d && !loggable && !/^(hi|hello|namaste|hey)\b/.test(t) && !/(goal|are you|ai\b|safe|export|delete|help|how does|what is)/.test(t)) return S('no_goal');
+    // Before an income is set, spends, lists, totals, undo and small talk all still work: they only need the spend records.
+    // Only answers that need a daily budget (purchase checks, what-ifs, goal maths) ask for the income; see NEEDS_BUDGET in auntyTurn.
     // ---- "I earn 40k a month": a statement about the user's income, never a spend ----
     { const noIncome = c.user.income_paise == null;
       const bareAmt = /^\s*(?:₹|rs\.?\s*)?\d[\d,.]*\s*(?:k|lakh|lacs?|l)?\s*(?:\/-|rs|rupees?)?\s*(?:a month|per month|monthly|pm|\/month)?\s*$/i.test(msg);
@@ -1694,7 +1713,7 @@ function installAunty(B) {
     if (/(past|recent|last|previous) nudges?|what did you (nudge|warn)/.test(t)) return S('nudges', { calls: [{ name: 'get_recent_nudges', input: { limit: 3 } }] });
     if (/\b(limit|limits|cap)\b/.test(t) && /\b(set|change|make|put|keep|raise|lower|update|remove)\b/.test(t) && (hasAmt || /remove|no limit/.test(t))) { const cat = MC(t.replace(/delivery/, 'swiggy')); if (cat) return S('limit_set', { calls: [{ name: 'set_category_limit', input: { category: cat, amount_inr: /remove|no limit/.test(t) ? 0 : (amounts[0] || { value: 0 }).value } }] }); }
     if (/\b(limits?|category budgets?)\b/.test(t)) return S('limits', { calls: [{ name: 'get_category_limits', input: {} }] });
-    if ((/\b(balance|my accounts?|how much (money )?do i have|bank account)\b|(income|earned|salary).{0,20}(this month|month|so far)|how much (did i|have i) (earn|get|receive)/.test(t)) && !hasAmt) return S('accounts', { calls: [{ name: 'get_accounts', input: {} }] });
+    if ((/\b(balance|my accounts?|how much (money )?do i have|bank account)\b|\b(mere|meri|apne)\s+(accounts?|khate|khata|wallet|bank)\b|\baccounts?\s+(dikhao|batao|list|dikha|ka paisa)\b|\b(bank|wallet|cash|account)\b.{0,20}\b(kitna|kitne|kitni)\b|\bkitna\b.{0,15}\b(paisa|paise|balance)\b.{0,12}\b(hai|bacha|mere paas)\b|(income|earned|salary|kamai).{0,20}(this month|month|so far|is mahine)|how much (did i|have i) (earn|get|receive)/.test(t)) && !hasAmt) return S('accounts', { calls: [{ name: 'get_accounts', input: {} }] });
     // what-if
     if (/\b(what if|if i)\b/.test(t) && /\b(skip|cut|stop|save|buy|spend|avoid|quit|reduce|no)\b/.test(t)) {
       const cat = MC(t.replace(/delivery/, 'swiggy')); const cnt = parseCount(t);
@@ -1708,12 +1727,17 @@ function installAunty(B) {
       return S('compare', { calls: [{ name: 'compare_periods', input: { a_from: addDays(today, -6), a_to: today, b_from: addDays(today, -13), b_to: addDays(today, -7) } }], labels: ['the last 7 days', 'the 7 days before'] });
     }
     // goal explanation
+    if (/\bgoals?\b.{0,25}\b(kab|kitna|kitne|door|pura|hoga|ho jayega|reach|when|how long|how far|eta|kaisa chal)\b|\b(when|kab)\b.{0,25}\bgoals?\b/.test(t) && !hasAmt) return S('goal_explain', { calls: [{ name: 'get_goal_details', input: {} }] });
     if (/(goal).{0,30}(math|maths|explain|work|calculat)|explain.{0,20}goal|how much.{0,20}(save|saving|put aside)|per month.{0,10}per day|how.{0,15}(budget|daily).{0,10}(calculat|work|come)/.test(t)) return S('goal_explain', { calls: [{ name: 'get_goal_details', input: {} }] });
     // exploration queries
     const per = parsePeriod(t, today); const qcat = MC(t.replace(/delivery/, 'swiggy'));
-    if (/\b(biggest|largest|highest|costliest|most expensive)\b/.test(t)) { const p = per || { from: addDays(today, -6), to: today, label: 'the last 7 days' }; return S('query', { period: p, calls: [{ name: 'query_spends', input: { from: p.from, to: p.to, category: qcat || undefined, sort: 'largest', limit: 3 } }], mode: 'biggest' }); }
-    if (/\b(show|list|see)\b.{0,25}\b(spends?|spending|purchases|expenses)\b|\b(spends?|expenses)\b.{0,12}\bsince\b/.test(t) || (/^show\b/.test(t) && qcat)) { const p = per || { from: today.slice(0, 7) + '-01', to: today, label: 'this month' }; return S('query', { period: p, calls: [{ name: 'query_spends', input: { from: p.from, to: p.to, category: qcat || undefined, sort: 'newest', limit: 8 } }], mode: 'list' }); }
-    if (/how much.{0,30}(spend|spent|go|gone|burn)|total.{0,12}(spend|spent)|\bwhere (did|does).{0,15}money\b|spend(ing)? on\b.*\?|which category.{0,15}(most|highest)/.test(t) && !hasAmt) {
+    if (/\b(biggest|largest|highest|costliest|most expensive|sabse (bada|bade|zyada|mehnga|mehenga))\b/.test(t) && !hasAmt) { const p = per || { from: today.slice(0, 7) + '-01', to: today, label: 'this month' }; return S('query', { period: p, calls: [{ name: 'query_spends', input: { from: p.from, to: p.to, category: qcat || undefined, sort: 'largest', limit: 3 } }], mode: 'biggest' }); }
+    const SW = '(?:spends?|spending|spent|purchases?|expenses?|kharch\\w*|kharche|kharcha|udaye|udaya|transactions?|entries|history)';
+    const LISTISH = new RegExp('\\b(?:list|show|display|see|dikha\\w*|dikhao|batao|bata do|give me|detail\\w*)\\b.{0,30}\\b' + SW + '\\b|\\b(?:kya kya|kaun kaun(?: se)?|kitna kitna|kitne kitne|kahan kahan|kaha kaha)\\b.{0,30}\\b' + SW + '\\b|\\b' + SW + '\\b.{0,20}\\b(?:list|history|details|dikhao|batao|bata do)\\b|\\b(?:my|mere|meri|mera|apne)\\s+' + SW + '\\b(?!.{0,12}\\b(?:kitna|how much)\\b)|\\btransactions?\\b|\\bhistory\\b|\\b' + SW + '\\b.{0,12}\\bsince\\b|\\b(?:ke|ka|ki)\\s+(?:kharch\\w*|kharche|kharcha|expenses?|spends?)\\b(?!\\s+(?:kitna|kitne|total))', 'i');
+    const cnt = (t.match(/\b(?:last|latest|recent|pichle|pichhle|top)\s+(\d{1,2})\s*(?:spends?|expenses?|entries|transactions?|kharch\w*|purchases?)?\b/) || [])[1];   // "show my last 5 spends"
+    const periodAndSpendWord = per && new RegExp('\\b' + SW + '\\b', 'i').test(t) && !/\b(kitna|kitne|how much|total)\b/.test(t);   // "last 30 days expenses", "aaj ka kharcha"
+    if ((!hasAmt || (cnt && amounts.length === 1 && +cnt === amounts[0].value)) && (LISTISH.test(t) || periodAndSpendWord || (/^show\b/.test(t) && qcat))) { const p = per || { from: today.slice(0, 7) + '-01', to: today, label: 'this month' }; return S('query', { period: p, calls: [{ name: 'query_spends', input: { from: p.from, to: p.to, category: qcat || undefined, sort: 'newest', limit: cnt ? Math.min(+cnt, 20) : 8 } }], mode: 'list' }); }
+    if (/how much.{0,30}(spend|spent|go|gone|burn)|total.{0,12}(spend|spent|kharch)|\bwhere (did|does).{0,15}money\b|spend(ing)? on\b.*\?|which category.{0,15}(most|highest)|\bcategory\s*wise\b|\bbreakdown\b|\bkahan(?: kahan)?\b.{0,15}\b(paisa|kharch\w*|gaya|gaye)\b|\bkis (cheez|chiz|category) (pe|par|mein)\b|\b(paisa|paise)\b.{0,15}\b(kahan|kidhar)\b.{0,10}\b(gaya|gaye|jata|jaata)\b|\bkitna\b.{0,12}\b(gaya|gaye|laga|lage|nikla)\b/.test(t) && !hasAmt || (qcat && !hasAmt && /\b(kitna|kitne|how much|total)\b/.test(t))) {
       const p = per || { from: today.slice(0, 7) + '-01', to: today, label: 'this month' };
       if (qcat) return S('query', { period: p, calls: [{ name: 'query_spends', input: { from: p.from, to: p.to, category: qcat, sort: 'largest', limit: 3 } }], mode: 'total' });
       return S('breakdown', { period: p, calls: [{ name: 'category_breakdown', input: { from: p.from, to: p.to } }] });
@@ -1906,6 +1930,7 @@ function installAunty(B) {
       }
       case 'status': {
         const a = results[0]; if (a.error) return { text: 'Set a goal first, and I will show you how you are doing.', mood: 'neutral' };
+        if (a.no_budget) { const lab = a.period === 'today' ? 'today' : a.period === 'week' ? 'in the last 7 days' : 'this month', wk = results[1]; const tail = ' Tell me your monthly income, like 40k, and I will also show what is left each day.'; if (!a.count) return { text: `Nothing logged ${lab} yet. Tell me a spend, like "chai 30".${tail}`, mood: 'neutral' }; return { text: `You have spent ${R(a.spent_inr)} ${lab}, across ${a.count} ${a.count === 1 ? 'spend' : 'spends'}${a.top_category ? ', mostly on ' + a.top_category : ''}.${wk && wk.no_budget && a.period === 'today' ? ' In the last 7 days: ' + R(wk.spent_inr) + '.' : ''}${tail}`, mood: 'neutral', explain: true }; }
         let text, mood = a.goal_status === 'late' || a.over_today ? 'judge' : 'happy';
         if (a.period === 'today') { const wk = results[1]; text = a.over_today ? `Today you are ${R(-a.left_today_inr)} over: ${R(a.spent_inr)} spent of ${R(a.budget_inr)}. ${statusLine(a)} This week: ${R(wk.spent_inr)} of ${R(wk.budget_inr)}.` : `Today: ${R(a.spent_inr)} spent, ${R(a.left_today_inr)} left of ${R(a.budget_inr)}. ${statusLine(a)} This week: ${R(wk.spent_inr)} of ${R(wk.budget_inr)}.`; }
         else if (a.period === 'week') text = `Last 7 days: ${R(a.spent_inr)} against a ${R(a.budget_inr)} budget${a.top_category ? ', mostly ' + a.top_category + ' (' + R(a.top_category_inr) + ')' : ''}. ${statusLine(a)}`;
@@ -1944,11 +1969,12 @@ function installAunty(B) {
       }
       case 'query': {
         const r = results[0]; const lab = plan.period.label; const cn = r.category ? CAT_LABEL[r.category].toLowerCase() : 'spends';
-        if (!r.count) return { text: `No ${cn} ${lab === 'today' || lab === 'yesterday' ? lab : (/^since/.test(lab) ? lab : 'in ' + lab)}. Clean slate.`, mood: 'happy' };
+        const wh = /^(today|yesterday|since|last month|the day before)/.test(lab) ? lab : 'in ' + lab;   // "today", "last month", "in this month", "in October"
+        if (!r.count) return { text: `No ${cn} ${wh}. Clean slate.`, mood: 'happy' };
         const nm = x => (x.note || x.category) + ' ' + R(x.amount_inr) + (x.date !== c.today ? ' (' + fmtDate(x.date).slice(0, -5) + ')' : '');
-        if (plan.mode === 'biggest') return { text: `Biggest ${lab === 'the last 7 days' ? 'in the last 7 days' : 'in ' + lab}: ${r.spends.map(nm).join(', then ')}.`, mood: 'judge', explain: true };
-        if (plan.mode === 'total') return { text: `${cap(cn)} ${lab === 'today' || lab === 'yesterday' ? lab : (/^since/.test(lab) ? lab : 'in ' + lab)}: ${R(r.total_inr)} across ${r.count} ${r.count === 1 ? 'spend' : 'spends'}. Biggest was ${nm(r.spends[0])}.`, mood: 'neutral', explain: true };
-        return { text: `${r.count} ${cn} ${/^since/.test(lab) ? lab : 'in ' + lab}, ${R(r.total_inr)} in all: ${r.spends.map(nm).join(', ')}${r.count > r.spends.length ? ', and more' : ''}.`, mood: 'neutral', explain: true };
+        if (plan.mode === 'biggest') return { text: `Biggest ${wh}: ${r.spends.map(nm).join(', then ')}.`, mood: 'judge', explain: true };
+        if (plan.mode === 'total') return { text: `${cap(cn)} ${wh}: ${R(r.total_inr)} across ${r.count} ${r.count === 1 ? 'spend' : 'spends'}. Biggest was ${nm(r.spends[0])}.`, mood: 'neutral', explain: true };
+        return { text: `${r.count} ${cn} ${wh}, ${R(r.total_inr)} in all: ${r.spends.map(nm).join(', ')}${r.count > r.spends.length ? ', and more' : ''}.`, mood: 'neutral', explain: true };
       }
     }
     return { text: 'Tell me what you spent and I will log it.', mood: 'neutral' };
@@ -2012,6 +2038,7 @@ function installAunty(B) {
         } catch (e) { turn.trace.slm = { error: String(e.message || e).slice(0, 120), accepted: false }; B.logAI(uid, 'chat_slm', 'slm', msg, '', Math.round(performance.now() - t1), 'ai_error'); plan = { kind: 'slm_down', calls: [] }; }
       }
     }
+    if (!c0.d && (plan.calls || []).some(x => NEEDS_BUDGET.has(x.name))) plan = { kind: 'no_goal', calls: [] };   // a daily budget needs an income, so ask for it
     turn.trace.plan = plan.kind;
     // goal change is handed to the scripted flow
     if (plan.kind === 'goal_setup') { B.logAI(uid, 'chat', cfg.chatModel, inText, '[goal_setup]', 400, 'goal_setup'); B.startGoalFlow(uid, false, { replace: plan.replace }); B.lastTrace = turn.trace; turn.trace.final = '[goal_setup]'; return { replies: [], actions: [], summary_changed: false, flow_started: true }; }
@@ -2425,6 +2452,18 @@ async function runBackendTests() {
     for (const [m, to] of [['it was 50 not 500', 50], ['actually that was 250', 250], ['edit last to 100', 100], ['galti se 500 likh diya tha 50 hai', 50]]) { await run('tea 500'); const n1 = spends().length; const o = await run(m); const last = spends().sort((a, b) => b.created_at.localeCompare(a.created_at))[0]; add(RW, `correction "${m}" fixes the LAST spend to ${to} and adds nothing`, o.ds === 0 && spends().length === n1 && last.amount_paise === to * 100, o.text); }
     { const o = await run('delete last'); add(RW, '"delete last" undoes the last spend', o.ds === -1, o.text); const o2 = await run('cancel last entry'); add(RW, '"cancel last entry" undoes the last spend', o2.ds === -1, o2.text); }
     { const o = await run('should I invest 5000 in sip'); add(RW, 'asking for investment advice is still declined and saves nothing', o.ds === 0 && /outside what I do/.test(o.text), o.text); }
+  }
+
+  // ===== questions about spending work before an income is set, in many phrasings =====
+  { const QN = 'Questions without an income';
+    const B = mk(); const s = await signup(B, 'qn@x.com'); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: null });
+    spend(B, s.uid, 30, 'chai', 0, 'chai'); spend(B, s.uid, 350, 'food', 1, 'swiggy'); spend(B, s.uid, 90, 'ride', 3, 'auto'); spend(B, s.uid, 1200, 'shop', 9, 'shoes'); spend(B, s.uid, 500, 'food', 40, 'zomato');
+    const n0 = B.rawSpends(s.uid).length; const askQ = async (m) => { const x = await chat(B, s, m); return { x, text: x.b.replies[0].text, tools: x.tools.map(t => t.name) }; };
+    for (const [m, tool, re] of [['mera is mahine kitna kitna kharcha hua?', 'query_spends', /shoes|1,200/], ['is mahine ke kharche dikhao', 'query_spends', /shoes|1,200/], ['pichle 7 din ke kharche', 'query_spends', /swiggy|auto|chai/], ['october ke kharche', 'query_spends', /shoes|1,200/], ['show september expenses', 'query_spends', /zomato|500/], ['last 30 days expenses', 'query_spends', /shoes|1,200|zomato/], ['kal kya kya kharch kiya', 'query_spends', /swiggy/], ['sabse bada kharcha', 'query_spends', /shoes|1,200/], ['swiggy pe kitna gaya', 'query_spends', /350/], ['category wise kharcha', 'category_breakdown', /1,200|Shopping/], ['mere accounts dikhao', 'get_accounts', /./]]) {
+      const o = await askQ(m); add(QN, `"${m}" is answered from the spend records, no income needed`, o.tools.includes(tool) && re.test(o.text) && !/monthly income first/.test(o.text), o.text); }
+    { const o = await askQ('kitna bacha hai'); add(QN, '"kitna bacha hai" says what was spent and asks for the income for the rest', /spent/.test(o.text) && /monthly income/.test(o.text), o.text); }
+    for (const m of ['can I buy shoes for 2k?', 'goal kab tak hoga', 'what if I skip delivery for two weeks']) { const o = await askQ(m); add(QN, `"${m}" needs a budget, so it asks for the income`, /monthly income first/.test(o.text), o.text); }
+    add(QN, 'none of these questions saved or removed a spend', B.rawSpends(s.uid).length === n0);
   }
 
   // ===== a user who has not set an income yet can still log spends =====
