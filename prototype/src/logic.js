@@ -120,8 +120,11 @@ function verdict(a, d) {
 }
 
 // ---------- spend parsing (used before the AI, and as the fallback after) ----------
-const AMT_RE = /(\d{1,3}(?:,\d{2,3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(k|lakh|lacs?|lac|l)?(?![a-z0-9])/ig;
+const AMT_RE = /(\d{1,3}(?:,\d{2,3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(k|lakh|lacs?|lac|l)?(?:\s?(?:rs|rupees?|rupaye|inr))?(?![a-z0-9])/ig;
+// numbers that are dates or "how long ago", not money: "3 din pehle", "2 weeks ago", "5th oct", "12 october"
+const DATE_NUM_RE = /\b\d+\s*(?:din|days?|hafte|haphte|weeks?|mahine|mahina|months?)\s*(?:pehle|pehle ka|ago|back)\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/ig;
 function findAmounts(text) {
+  text = String(text).replace(DATE_NUM_RE, s => ' '.repeat(s.length));
   const out = []; let m; AMT_RE.lastIndex = 0;
   while ((m = AMT_RE.exec(text))) {
     let v = parseFloat(m[1].replace(/,/g, ''));
@@ -142,7 +145,7 @@ function guessCat(text) {
   for (const [c, words] of CAT_WORDS) if (new RegExp('\\b(?:' + words + ')\\b', 'i').test(text)) return c;
   return 'other';
 }
-const FILLER = /\b(spent|spend|paid|pay|gave|give|sent|send|bought|buy|for|on|to|ko|rs|rupees|rupee|inr|just|only|a|an|the|my|me|i|ka|ki|ke|kal|aaj|yesterday|today|parso|of|at|from|last|ago|please|pls|diye|diya|dediye|dedo|de|gaye|gaya|gayi|gya|lag|lage|laga|udaye|udaya|kharch|kiya|kiye|hua|hue|dala|daala|liya|liye|mein|pe|par|se|ne|tha|thi|hai|phook|yaar|bhai|plz|aunty|na|transfer|transferred|wire|wired|bheja|bhejo|bhej)\b|₹/ig;
+const FILLER = /\b(spent|spend|paid|pay|gave|give|sent|send|bought|buy|for|on|to|ko|rs|rupees|rupee|inr|just|only|a|an|the|my|me|i|ka|ki|ke|kal|aaj|yesterday|today|parso|of|at|from|last|ago|please|pls|diye|diya|dediye|dedo|de|gaye|gaya|gayi|gya|lag|lage|laga|udaye|udaya|kharch|kiya|kiye|hua|hue|dala|daala|liya|liye|mein|pe|par|se|ne|tha|thi|hai|phook|yaar|bhai|plz|aunty|na|transfer|transferred|wire|wired|bheja|bhejo|bhej|din|pehle|hafte|haphte)\b|₹/ig;
 function noteFrom(seg) {
   let t = seg.replace(AMT_RE, ' ').replace(FILLER, ' ').replace(/\b(mon|tues?|wed(nes)?|thu(rs)?|fri|sat(ur)?|sun)(day)?\b/ig, ' ');
   t = t.replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ').trim();
@@ -163,6 +166,8 @@ function parseWhen(text, today) {
   if (/\b(parso|day before yesterday)\b/.test(t)) return addDays(today, -2);
   if (/\b(kal|yesterday)\b/.test(t)) return addDays(today, -1);
   if (/\b(aaj|today)\b/.test(t)) return today;
+  const ago = t.match(/\b(\d+)\s*(din|days?|hafte|haphte|weeks?)\s*(?:pehle|ago|back)\b/);
+  if (ago) { const n = +ago[1] * (/^(hafte|haphte|week)/.test(ago[2]) ? 7 : 1); if (n > 0 && n <= 400) return addDays(today, -n); }
   const wd = t.match(/\blast\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
   if (wd) { const target = WEEKDAYS.indexOf(wd[1]); const delta = ((dow(today) - target + 7) % 7) || 7; return addDays(today, -delta); }
   const dm = t.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/);

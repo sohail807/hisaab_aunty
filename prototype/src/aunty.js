@@ -172,6 +172,18 @@ function installAunty(B) {
       db.update('spend', last, { undone_at: B.iso() }); const c = B.ctxFor(uid);
       return Object.assign({ undone: true, spend_id: last.id, amount_inr: toRupees(last.amount_paise), note: last.note || last.category }, leftBits(c));
     },
+    log_income(uid, i, turn) {   // money coming IN (salary, refund, a gift). The amount must be digits the user typed; the planner checks that.
+      need(typeof i.amount_inr === 'number' && i.amount_inr > 0 && i.amount_inr <= 1e8, 'amount_inr must be more than 0');
+      const res = B.addIncome(uid, { amount_paise: toPaise(i.amount_inr), title: String(i.title || 'Income').replace(/[^\p{L}\p{N} -]/gu, '').slice(0, 40) || 'Income', idempotency_key: nextIdem(turn) });
+      return { saved: true, duplicate: !!res.duplicate, amount_inr: r2(toRupees(res.income.amount_paise)), title: res.income.title };
+    },
+    edit_last_spend(uid, i) {   // fixes the amount of the LAST spend only; the new amount must be digits the user typed
+      need(typeof i.amount_inr === 'number' && i.amount_inr > 0 && i.amount_inr <= 1e7, 'amount_inr must be more than 0');
+      const last = B.rawSpends(uid).sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+      if (!last) return { edited: false, reason: 'nothing_to_edit' };
+      const old = toRupees(last.amount_paise); db.update('spend', last, { amount_paise: toPaise(i.amount_inr) });
+      return Object.assign({ edited: true, spend_id: last.id, old_amount_inr: r2(old), amount_inr: r2(i.amount_inr), note: last.note || last.category }, leftBits(B.ctxFor(uid)));
+    },
     query_spends(uid, i) {
       const c = B.ctxFor(uid); const from = isDk(i.from) ? i.from : c.today.slice(0, 7) + '-01', to = isDk(i.to) ? i.to : c.today;
       let rows = c.spends.filter(x => x.dk >= from && x.dk <= to && (!i.category || x.category === i.category) && (!i.min_amount || x.amount >= i.min_amount));
@@ -261,6 +273,18 @@ function installAunty(B) {
     for (let i = 0; i < 4; i++) { const n = m.replace(LEAD_FILL, '').replace(TRAIL_FILL, m.endsWith('?') ? '?' : ''); if (n === m || !n.replace(/[?!.,\s]/g, '')) break; m = n.trim(); }
     return m || String(msg).trim();
   }
+  // words that decide whether an amount is money going OUT (a spend), money coming IN (income), a loan, or a settings change
+  const OUT_VERB = /\b(spent|paid|pay|bought|ordered|kharch\w*|udaye|udaya)\b/i;
+  const STRONG_IN = /\b(credited|deposited|refunded|reimbursed|earned|received|recieved)\b/i;
+  const WEAK_IN = /\b(got|mila|mili|mile|aaya|aayi|aaye|came|jama)\b/i;   // "bill 1800 aaya" is a bill, so these only count with an income word
+  const IN_NOUN = /\b(salary|stipend|bonus|refund|cashback|reimbursement|pocket money|allowance|dividend|commission|payout|scholarship|pension|freelanc\w*|incentive)\b/i;
+  const IN_NE = /\b[a-z]+\s+ne\s+(?:₹|rs\.?\s*)?[\d.,]+\s*(?:k|lakh)?\s*(?:diye|diya|bheje|bheja|de diye|di)\b/i;   // "mom ne 2000 diye": someone gave me money
+  const RET_AMT = /\breturned\s+(?:₹|rs\.?\s*)?\d/i;
+  const LOAN_RE = /\b(lent|lend|lending|udhaar|udhar|borrow\w*|loan(?:ed)?\s+(?:to|from)|karza|owe[sd]?|paid back|payback|wapas (?:kiya|diya|kar diya)|returned (?:to|back)|returned\s+(?:₹|rs\.?\s*)?[\d,.]+\s*(?:k|lakh)?\s+(?:to|back))\b/i;
+  const SETTINGS_RE = /\b(change|update|set|edit|raise|increase|decrease|badal\w*)\b.{0,20}\b(income|salary|rent|budget)\b|\b(?:my\s+)?(?:salary|income|rent)\s+(?:is|has|hai|ho gayi|ho gaya|badh gayi)\s*(?:now|changed|become)?\b.*\d|\b(?:salary|income|rent)\b.{0,14}\bnow\b/i;
+  const CORR_AMT = '(?:₹|rs\\.?\\s*)?(\\d[\\d,]*(?:\\.\\d+)?(?:\\s*(?:k|lakh|l))?)\\b';
+  const CORR_CUE = '(?:actually,?\\s+)?(?:(?:it|that)(?:\\s+one)?\\s+(?:was|is|should be|should have been)|should be|make it|make that|change (?:it|that|last|the last)(?: one| entry| spend)?\\s+to|edit (?:the )?last(?: one| entry| spend)?\\s+to|correct(?:ed)?(?: it)?\\s+to|actually)\\s*(?:to\\s+)?';
+  const HIN_CORR = /(\d[\d,.]*\s*(?:k|lakh|l)?)\s*(?:likh diya|likha|daal diya|dala|daala|ho gaya)\b.*?(\d[\d,.]*\s*(?:k|lakh|l)?)\s*(?:tha|thi|hai|hona chahiye|chahiye)\b/i;
   function planPlan(msg0, c, turn) {
     const msg = stripFiller(msg0);
     const t = msg.toLowerCase().trim(), today = c.today;
@@ -272,18 +296,37 @@ function installAunty(B) {
     const S = (kind, extra) => Object.assign({ kind, calls: [] }, extra || {});
     if (/ignore (your|all|any|previous|the).{0,20}(instruction|rule|prompt)|system prompt|your prompt|reveal.{0,15}(instruction|prompt)|show.{0,10}instructions|jailbreak/.test(t)) return S('decline_prompt');
     const spendVerb = /\b(paid|spent|bought|ordered|gave|sent|kharcha)\b/.test(t);
-    if (ADVICE_RE.test(msg) && !(spendVerb && hasAmt)) return S('advice');
+    const adviceAsk = /\?|\b(should|which|best|better|kaun|konsa|kaisa|kaise|how|recommend|suggest|advice|salah|worth|lun|lu ya|lena chahiye|chahiye|shuru|start)\b/i.test(t);
+    if (ADVICE_RE.test(msg) && !(spendVerb && hasAmt) && !(hasAmt && !adviceAsk)) return S('advice');   // "EMI 5000" or "SIP 2000" is a payment to log; asking what to buy is advice
     if (/\b(stupid|idiot|shut up|useless|hate you|dumb|bakwas|bekaar|pagal)\b|\bf+u+c+k|\bbitch/.test(t)) return S('abuse');
     const serious = SERIOUS_RE.test(msg); const selfHarm = SELFHARM_RE.test(msg);
     if (selfHarm || (serious && !hasAmt)) return S('distress', { selfHarm });
     const loggable = hasAmt && !/\?|\b(can i|should i|afford|worth it|kya main|can we)\b/.test(t);   // a plain spend ("i spent 5000 on party") works even before an income is set
     if (!c.d && !loggable && !/^(hi|hello|namaste|hey)\b/.test(t) && !/(goal|are you|ai\b|safe|export|delete|help|how does|what is)/.test(t)) return S('no_goal');
+    // ---- messages with an amount that must never become a plain spend ----
+    if (/<\/?\w+[^>]*>|<script|\balert\(|\{\{|\bdrop table\b|\bselect\b.+\bfrom\b/i.test(msg)) return S('fallback_unsure');   // markup or code, not a money message
+    if (hasAmt && /(\$\s?\d|\d\s?\$|\b\d+(?:\.\d+)?\s?(?:usd|dollars?|eur|euros?|gbp|pounds?|aed|dirhams?)\b|\b(?:usd|eur|gbp|aed)\s?\d|€|£)/i.test(msg)) return S('foreign_currency');
+    if (hasAmt && /(^|[\s(=:])-\d/.test(msg)) return S('negative_amount');
+    if (hasAmt && SETTINGS_RE.test(t)) return S('settings_hint');
+    if (hasAmt && LOAN_RE.test(t) && !/\bemi\b/.test(t)) return S('loan_hint');
+    { // a correction fixes the LAST spend; it never adds a new one
+      const cm = t.match(new RegExp('\\b' + CORR_CUE + CORR_AMT, 'i')), hin = t.match(HIN_CORR);
+      const fix = hin ? parseAmount(hin[2]) : cm ? parseAmount(cm[1]) : (/\b(galti|galat|mistake|oops|sorry)\b/.test(t) && amounts.length === 1 && /\b(tha|thi|hai|hona chahiye|chahiye)\b/.test(t)) ? amounts[0].value : null;
+      if (fix > 0) return S('correct_last', { calls: [{ name: 'edit_last_spend', input: { amount_inr: fix } }] });
+      if (amounts.length >= 2 && /\b(galti|galat|mistake|actually|it was|that was|instead of|nahi)\b/.test(t) && !/\b(aur|and|plus)\b/.test(t) && /\b(not|nahi|instead of|tha|thi)\b/.test(t)) return S('correct_ask');
+    }
+    if (hasAmt && !OUT_VERB.test(t) && (STRONG_IN.test(t) || ((WEAK_IN.test(t)) && (IN_NOUN.test(t) || /\bfrom\b/.test(t))) || IN_NOUN.test(t) || IN_NE.test(t) || RET_AMT.test(t))) {   // money coming IN is income, never a spend
+      if (amounts.length > 1) return S('ambiguous_amount');
+      const noun = (t.match(IN_NOUN) || [])[0], from = (t.match(/\bfrom\s+([a-z]+)\b/) || [])[1], ne = (t.match(/\b([a-z]+)\s+ne\b/) || [])[1];
+      const title = noun ? cap(noun) + (from ? ' from ' + from : '') : from ? 'Money from ' + from : ne ? 'Money from ' + ne : 'Income';
+      return S('income_in', { calls: [{ name: 'log_income', input: { amount_inr: amounts[0].value, title } }] });
+    }
     if (/^(that('| i)?s all|that is all|no more|all good|nothing else|i am done|i'm done)\b/.test(t)) return S('smalltalk', { done: true });
     if (/\b(add|another|new|second|one more|more|set|set up|start)\b.{0,25}\bgoals?\b|\bgoals?\b.{0,20}\b(change|set up|setup|new|add)\b|change my goal|\b(change|edit|update|replace)\b.{0,20}\bgoals?\b/.test(t) && !/(explain|maths|math|how (much|many)|what)/.test(t)) return S('goal_setup', { replace: /\b(change|edit|update|replace)\b/.test(t) && c.goals.length <= 1 });
     if (/^(please\s+)?remember\b/.test(t)) return S('remember', { calls: [{ name: 'remember', input: { text: cap(msg.replace(/^\s*(please\s+)?remember( that)?\s*/i, '').trim()) } }] });
     if (/what do you (remember|know)|my memories|what.s in your memory/.test(t)) return S('memories', { calls: [{ name: 'list_memories', input: {} }] });
     if (/^forget\b|\bforget (that|it|this)\b/.test(t)) return S('forget', { needList: true, query: t.replace(/^\s*forget( that| it| this| about)?\s*/, '').trim() });
-    if (/\b(undo|delete last|remove last|oops)\b/.test(t)) return S('undo', { calls: [{ name: 'undo_last_spend', input: {} }] });
+    if (/\b(undo|delete last|remove last|cancel last|oops)\b|\b(delete|remove|cancel|hata|hatao)\s+(the\s+)?(last|previous|pichla|pichli|aakhri)\b|\blast\s+(entry|spend|expense|wala)\b.{0,15}\b(delete|remove|cancel|hata|hatao)\b|\b(delete|remove|cancel|hata|hatao)\b.{0,10}\blast\s+(entry|spend|expense|wala)\b/.test(t)) return S('undo', { calls: [{ name: 'undo_last_spend', input: {} }] });
     if (/(nothing spent|no spend today|didn.?t spend|zero spend|no spends today)/.test(t)) return S('checkin', { calls: [{ name: 'checkin_today', input: {} }] });
     if (/\b(payday|salary (aa ?gayi|aaya|came|credited)|got paid|i got my salary)\b/.test(t)) return S('payday', { calls: [{ name: 'mark_payday', input: {} }] });
     if (/what is (a )?no.?spend|no.?spend day (mean|is)/.test(t)) return S('know', { id: 'nospend' });
@@ -332,14 +375,16 @@ function installAunty(B) {
     // spends (one or several)
     if (hasAmt || spendVerb) {
       const segs = msg.split(/\s*(?:,\s+|;|\+|&|\band\b|\baur\b|\bplus\b|\bthen\b)\s*/i).filter(s => s.trim());
-      const calls = []; let ask = null;
+      const calls = []; let ask = null, ambig = false;
       for (const seg of segs) {
-        const a = findAmounts(seg)[0]; if (!a) continue;
+        const found = findAmounts(seg); if (found.length > 1 || /\b\d+e\d+\b/i.test(seg)) { ambig = true; break; }   // two amounts in one spend ("chai 30 40", "chai 1e3") is a question, never a guess
+        const a = found[0]; if (!a) continue;
         const note = noteFrom(seg), cat = MC(seg) || 'other', segWhen = parseWhen(seg.toLowerCase(), today) || when;
         const looksGiven = /\b(gave|give|paid|sent|send|transfer|transferred|wire|wired|bheja|bhejo|bhej)\b/i.test(seg) && /\b(to|ko)\s+\S+|^\S+$/i.test(note || seg) && cat === 'other' && !OTHER_OK.test(seg);
         if (!note || (looksGiven && !OTHER_OK.test(note))) { ask = { amount: a.value, to: (seg.match(/\b(?:to|ko)\s+([A-Za-z]+)/i) || [])[1] || (note && note !== 'Rohan' ? note : null) }; if (!note) ask.to = null; break; }
         calls.push({ name: 'log_spend', input: Object.assign({ amount_inr: a.value, category: cat, note }, segWhen ? { when: segWhen } : {}) });
       }
+      if (ambig) return S('ambiguous_amount');
       if (ask) return S('ask_for_what', { ask });
       if (calls.length) return S('log', { calls, serious });
       if (spendVerb) return S('ask_amount');
@@ -430,6 +475,14 @@ function installAunty(B) {
       case 'abuse': return { text: 'I hear you, and I will stay calm. If something went wrong with a number, tell me what you wanted to log and we will sort it out.', mood: 'neutral' };
       case 'distress': return { text: plan.selfHarm ? 'I am really sorry you are feeling this way. Please talk to someone you trust right now, or call a local helpline. You do not have to carry this alone. I am here whenever you want to look at the numbers, no jokes.' : 'I am sorry, that sounds heavy. Money stress is real, and talking to someone you trust can help. When you are ready, I will sort the numbers with you, calmly, no jokes.', mood: 'neutral' };
       case 'no_goal': return { text: 'Tell me your monthly income first so I can work out your daily number. Just type it, like 40k.', mood: 'neutral' };
+      case 'income_in': { const r = results[0]; if (!r || r.error) return { text: 'That amount looks off. Can you tell me again how much came in?', mood: 'neutral' }; return { text: `Noted ${R(r.amount_inr)} as income (${r.title}). It shows in your Ledger this month. Your daily number still comes from the monthly income in Settings, so update that if it changed.`, mood: 'happy', actions: [{ type: 'income_logged' }] }; }
+      case 'correct_last': { const r = results[0]; if (!r || !r.edited) return { text: 'There is nothing to fix yet. Tell me a spend first, like "chai 30".', mood: 'neutral' }; const tail = r.left_today_inr == null ? '' : r.left_today_inr < 0 ? ` That puts today ${R(-r.left_today_inr)} over.` : ` ${R(r.left_today_inr)} left today.`; return { text: `Fixed: ${r.note} is now ${R(r.amount_inr)}, it was ${R(r.old_amount_inr)}.${tail}`, mood: 'neutral', actions: [{ type: 'spend_edited', spend_id: r.spend_id }] }; }
+      case 'correct_ask': return { text: 'I see two amounts there, so I have not changed anything. Tell me the right one like "change last to 50" and I will fix the last entry.', mood: 'neutral' };
+      case 'settings_hint': return { text: 'I do not change your income or rent from chat, to keep your numbers safe. Open Settings (the gear icon) to update them, and I will use the new numbers straight away.', mood: 'neutral' };
+      case 'loan_hint': return { text: 'Lending, borrowing or paying someone back is not a normal spend, so I have not saved it. If you want it counted, tell me what it was for, like "dinner with Rohan 500".', mood: 'neutral' };
+      case 'negative_amount': return { text: 'Amounts need to be positive, so I have not saved that. To remove your last entry, just say undo.', mood: 'neutral' };
+      case 'foreign_currency': return { text: 'I only track rupees for now. Tell me the amount in rupees, like "coffee 1650", and I will log it.', mood: 'neutral' };
+      case 'ambiguous_amount': return { text: 'I see more than one amount there, so I have not saved anything. Send each spend on its own, like "chai 30", or tell me only the one you mean.', mood: 'neutral' };
       case 'know': return { text: KNOW[plan.id], mood: 'happy', explain: true };
       case 'app': return { text: APP[plan.id], mood: 'neutral', explain: true };
       case 'smalltalk': return { text: plan.done ? 'Perfect. Tell me what you spend and I will keep score.' : plan.thanks ? choose('thanks', ['Anytime. Go on, tell me the next spend.', 'My pleasure. Your wallet and I are getting along nicely.']) : choose('hi', ['Namaste! Tell me what you spent, or ask how you are doing.', 'Hello! Chai, auto or swiggy? Tell me and I will keep the books.']), mood: 'happy' };
@@ -646,7 +699,7 @@ function installAunty(B) {
     B.logAI(uid, 'chat', cfg.chatModel, inText, parsed.text, latency, outcome);
     turn.trace.final = parsed.text; turn.trace.mood = parsed.mood; turn.trace.outcome = outcome; turn.trace.latency_ms = latency; turn.trace.tokens_in = Math.ceil(inText.length / 4); turn.trace.tokens_out = Math.ceil(parsed.text.length / 4);
     B.lastTrace = turn.trace;
-    const actions = (out.actions || []).slice(); const mutated = results.some(r => r && (r.saved || r.undone || r.marked || r.streak));
+    const actions = (out.actions || []).slice(); const mutated = results.some(r => r && (r.saved || r.undone || r.edited || r.marked || r.streak));
     return { replies, actions, summary_changed: mutated, tpl: turn.tpl, mood: parsed.mood, popup: out.popup || null };
   }
   // AI is down: the basic parser still logs a plain spend and replies with a short canned line

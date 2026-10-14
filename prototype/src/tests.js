@@ -230,6 +230,21 @@ async function runBackendTests() {
       add(SL, 'validator: a clarifying question must be present', V({ intent: 'ask', question: '' }).ok === false && V({ intent: 'ask', question: 'What was it for?' }).plan.kind === 'slm_ask'); }
   }
 
+  // ===== real-world daily use: money in, loans, settings, bad numbers, corrections, bills =====
+  { const RW = 'Real-world daily use';
+    const B = mk(); const s = await signup(B, 'rw@x.com'); goal(B, s.uid); B.db.update('app_user', B.userById(s.uid), { flow: null });
+    const spends = () => B.rawSpends(s.uid).filter(x => !x.undone_at), incomes = () => B.db.where('income', i => i.user_id === s.uid && !i.deleted_at);
+    const run = async (m) => { const n0 = spends().length, i0 = incomes().length; const x = await chat(B, s, m); return { x, ds: spends().length - n0, di: incomes().length - i0, text: x.b.replies[0].text }; };
+    for (const [m, amt] of [['got salary 40000', 40000], ['received 5000 from mom', 5000], ['mom ne 2000 diye', 2000], ['refund 500 aaya', 500], ['cashback 50 mila', 50], ['rent received 12000', 12000], ['salary 45000 credited', 45000]]) { const o = await run(m); add(RW, `"${m}" is saved as income ${amt}, never as a spend`, o.ds === 0 && o.di === 1 && incomes().slice(-1)[0].amount_paise === amt * 100, o.text); }
+    for (const m of ['lent 500 to Rohan', 'udhaar diya 1000', 'borrowed 2000 from Amit', 'returned 500 to Amit', 'paid back 1000']) { const o = await run(m); add(RW, `"${m}" is not saved; Aunty explains`, o.ds === 0 && o.di === 0 && /not a normal spend/.test(o.text), o.text); }
+    for (const m of ['my salary is now 50000', 'change my income to 50k', 'rent is 12000 now', 'income 50k now', 'update my rent to 15000']) { const o = await run(m); add(RW, `"${m}" points to Settings and changes nothing`, o.ds === 0 && o.di === 0 && /Settings/.test(o.text), o.text); }
+    for (const [m, re] of [['-500', /positive/], ['chai -30', /positive/], ['$20 coffee', /rupees/], ['20 usd uber', /rupees/], ['chai 30 40 50', /more than one amount/], ['chai 30 rs 20', /more than one amount/], ['chai 1e3', /more than one amount/], ['<script>alert(1)</script>', /not sure/]]) { const o = await run(m); add(RW, `"${m}" saves nothing and says why`, o.ds === 0 && o.di === 0 && re.test(o.text), o.text); }
+    for (const [m, amt] of [['EMI 5000', 5000], ['SIP 2000', 2000], ['insurance premium 12000', 12000], ['credit card bill 12000', 12000], ['3 din pehle recharge 299', 299], ['chai 30rs', 30], ['chai 30/-', 30], ['2 weeks ago movie 400', 400], ['on 5th Oct 300 gift', 300]]) { const o = await run(m); add(RW, `"${m}" logs exactly ${amt}`, o.ds === 1 && spends().slice(-1)[0].amount_paise === amt * 100, o.text); }
+    for (const [m, to] of [['it was 50 not 500', 50], ['actually that was 250', 250], ['edit last to 100', 100], ['galti se 500 likh diya tha 50 hai', 50]]) { await run('tea 500'); const n1 = spends().length; const o = await run(m); const last = spends().sort((a, b) => b.created_at.localeCompare(a.created_at))[0]; add(RW, `correction "${m}" fixes the LAST spend to ${to} and adds nothing`, o.ds === 0 && spends().length === n1 && last.amount_paise === to * 100, o.text); }
+    { const o = await run('delete last'); add(RW, '"delete last" undoes the last spend', o.ds === -1, o.text); const o2 = await run('cancel last entry'); add(RW, '"cancel last entry" undoes the last spend', o2.ds === -1, o2.text); }
+    { const o = await run('should I invest 5000 in sip'); add(RW, 'asking for investment advice is still declined and saves nothing', o.ds === 0 && /outside what I do/.test(o.text), o.text); }
+  }
+
   // ===== a user who has not set an income yet can still log spends =====
   { const NI = 'No income yet';
     const B = mk(); const s = await signup(B, 'ni@x.com'); B.db.update('app_user', B.userById(s.uid), { flow: null, income_paise: null });
