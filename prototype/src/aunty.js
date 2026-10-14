@@ -177,6 +177,12 @@ function installAunty(B) {
       const res = B.addIncome(uid, { amount_paise: toPaise(i.amount_inr), title: String(i.title || 'Income').replace(/[^\p{L}\p{N} -]/gu, '').slice(0, 40) || 'Income', idempotency_key: nextIdem(turn) });
       return { saved: true, duplicate: !!res.duplicate, amount_inr: r2(toRupees(res.income.amount_paise)), title: res.income.title };
     },
+    set_income(uid, i) {   // only used while the user has NO income yet (the answer to Aunty's income question); the amount must be digits the user typed
+      need(typeof i.amount_inr === 'number' && i.amount_inr > 0 && i.amount_inr <= 1e8, 'amount_inr must be more than 0');
+      const u = B.userById(uid); if (u.income_paise != null) return { error: 'income_already_set' };
+      db.update('app_user', u, { income_paise: toPaise(i.amount_inr) }); const c = B.ctxFor(uid);
+      return { set: true, amount_inr: r2(i.amount_inr), daily_budget_inr: c.d ? r2(c.d.dailyBudget) : null, days_in_month: c.d ? c.d.dim : null, left_today_inr: c.d ? r2(c.d.leftToday) : null, over_today: !!(c.d && c.d.leftToday < 0) };
+    },
     edit_last_spend(uid, i) {   // fixes the amount of the LAST spend only; the new amount must be digits the user typed
       need(typeof i.amount_inr === 'number' && i.amount_inr > 0 && i.amount_inr <= 1e7, 'amount_inr must be more than 0');
       const last = B.rawSpends(uid).sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
@@ -282,7 +288,8 @@ function installAunty(B) {
   const RET_AMT = /\breturned\s+(?:₹|rs\.?\s*)?\d/i;
   const LOAN_RE = /\b(lent|lend|lending|udhaar|udhar|borrow\w*|loan(?:ed)?\s+(?:to|from)|karza|owe[sd]?|paid back|payback|wapas (?:kiya|diya|kar diya)|returned (?:to|back)|returned\s+(?:₹|rs\.?\s*)?[\d,.]+\s*(?:k|lakh)?\s+(?:to|back))\b/i;
   const SETTINGS_RE = /\b(change|update|set|edit|raise|increase|decrease|badal\w*)\b.{0,20}\b(income|salary|rent|budget)\b|\b(?:my\s+)?(?:salary|income|rent)\s+(?:is|has|hai|ho gayi|ho gaya|badh gayi)\s*(?:now|changed|become)?\b.*\d|\b(?:salary|income|rent)\b.{0,14}\bnow\b/i;
-  const CORR_AMT = '(?:₹|rs\\.?\\s*)?(\\d[\\d,]*(?:\\.\\d+)?(?:\\s*(?:k|lakh|l))?)\\b';
+  const INCOME_STATEMENT = /\b(?:monthly|per month|a month|\/month|mahine|mahina)\b.{0,30}\b(?:kamata|kamati|kamaata|earn|earns|earning|income|salary|kamai)\b|\b(?:kamata|kamati|kamaata|earn|earns|earning|make|makes)\b.{0,30}\b(?:monthly|per month|a month|mahine|mahina)\b|\b(?:my|meri|mera)\s+(?:monthly\s+)?(?:income|salary|kamai|stipend|allowance|pocket money)\b|\b(?:monthly|mahine ki)\s+(?:income|salary|kamai)\b|\bi\s+(?:earn|make)\b|\b(?:me|main|mai)\b.{0,25}\b(?:kamata|kamati|kamaata)\b|\bincome\s+(?:is\s+)?[\d₹]/i;
+  const CORR_AMT ='(?:₹|rs\\.?\\s*)?(\\d[\\d,]*(?:\\.\\d+)?(?:\\s*(?:k|lakh|l))?)\\b';
   const CORR_CUE = '(?:actually,?\\s+)?(?:(?:it|that)(?:\\s+one)?\\s+(?:was|is|should be|should have been)|should be|make it|make that|change (?:it|that|last|the last)(?: one| entry| spend)?\\s+to|edit (?:the )?last(?: one| entry| spend)?\\s+to|correct(?:ed)?(?: it)?\\s+to|actually)\\s*(?:to\\s+)?';
   const HIN_CORR = /(\d[\d,.]*\s*(?:k|lakh|l)?)\s*(?:likh diya|likha|daal diya|dala|daala|ho gaya)\b.*?(\d[\d,.]*\s*(?:k|lakh|l)?)\s*(?:tha|thi|hai|hona chahiye|chahiye)\b/i;
   function planPlan(msg0, c, turn) {
@@ -303,6 +310,15 @@ function installAunty(B) {
     if (selfHarm || (serious && !hasAmt)) return S('distress', { selfHarm });
     const loggable = hasAmt && !/\?|\b(can i|should i|afford|worth it|kya main|can we)\b/.test(t);   // a plain spend ("i spent 5000 on party") works even before an income is set
     if (!c.d && !loggable && !/^(hi|hello|namaste|hey)\b/.test(t) && !/(goal|are you|ai\b|safe|export|delete|help|how does|what is)/.test(t)) return S('no_goal');
+    // ---- "I earn 40k a month": a statement about the user's income, never a spend ----
+    { const noIncome = c.user.income_paise == null;
+      const bareAmt = /^\s*(?:₹|rs\.?\s*)?\d[\d,.]*\s*(?:k|lakh|lacs?|l)?\s*(?:\/-|rs|rupees?)?\s*(?:a month|per month|monthly|pm|\/month)?\s*$/i.test(msg);
+      const says = hasAmt && !OUT_VERB.test(t) && (INCOME_STATEMENT.test(t) || (SETTINGS_RE.test(t) && /\b(income|salary|kamai|stipend|allowance|pocket money)\b/.test(t)));
+      if (amounts.length === 1 && (says || (noIncome && bareAmt))) {
+        if (noIncome) return S('set_income', { calls: [{ name: 'set_income', input: { amount_inr: amounts[0].value } }] });   // first time: this is the answer to the income question
+        return S('settings_hint');   // already set: changing it is a Settings action, so a stray sentence cannot move the budget
+      }
+    }
     // ---- messages with an amount that must never become a plain spend ----
     if (/<\/?\w+[^>]*>|<script|\balert\(|\{\{|\bdrop table\b|\bselect\b.+\bfrom\b/i.test(msg)) return S('fallback_unsure');   // markup or code, not a money message
     if (hasAmt && /(\$\s?\d|\d\s?\$|\b\d+(?:\.\d+)?\s?(?:usd|dollars?|eur|euros?|gbp|pounds?|aed|dirhams?)\b|\b(?:usd|eur|gbp|aed)\s?\d|€|£)/i.test(msg)) return S('foreign_currency');
@@ -475,6 +491,7 @@ function installAunty(B) {
       case 'abuse': return { text: 'I hear you, and I will stay calm. If something went wrong with a number, tell me what you wanted to log and we will sort it out.', mood: 'neutral' };
       case 'distress': return { text: plan.selfHarm ? 'I am really sorry you are feeling this way. Please talk to someone you trust right now, or call a local helpline. You do not have to carry this alone. I am here whenever you want to look at the numbers, no jokes.' : 'I am sorry, that sounds heavy. Money stress is real, and talking to someone you trust can help. When you are ready, I will sort the numbers with you, calmly, no jokes.', mood: 'neutral' };
       case 'no_goal': return { text: 'Tell me your monthly income first so I can work out your daily number. Just type it, like 40k.', mood: 'neutral' };
+      case 'set_income': { const r = results[0]; if (!r || r.error) return { text: 'Your monthly income is already set. Open Settings (the gear icon) to change it.', mood: 'neutral' }; const over = r.over_today && r.left_today_inr != null ? ` With what you have already logged today, you are ${R(-r.left_today_inr)} over, but tomorrow is a fresh day.` : ''; return { text: `Got it, your monthly income is ${R(r.amount_inr)}.${r.daily_budget_inr != null ? ` That gives you about ${R(r.daily_budget_inr)} a day to spend, spread over ${r.days_in_month} days this month.` : ''}${over} You can change it any time in Settings. Tell me what you spend and I will keep score.`, mood: 'happy', actions: [{ type: 'income_set' }] }; }
       case 'income_in': { const r = results[0]; if (!r || r.error) return { text: 'That amount looks off. Can you tell me again how much came in?', mood: 'neutral' }; return { text: `Noted ${R(r.amount_inr)} as income (${r.title}). It shows in your Ledger this month. Your daily number still comes from the monthly income in Settings, so update that if it changed.`, mood: 'happy', actions: [{ type: 'income_logged' }] }; }
       case 'correct_last': { const r = results[0]; if (!r || !r.edited) return { text: 'There is nothing to fix yet. Tell me a spend first, like "chai 30".', mood: 'neutral' }; const tail = r.left_today_inr == null ? '' : r.left_today_inr < 0 ? ` That puts today ${R(-r.left_today_inr)} over.` : ` ${R(r.left_today_inr)} left today.`; return { text: `Fixed: ${r.note} is now ${R(r.amount_inr)}, it was ${R(r.old_amount_inr)}.${tail}`, mood: 'neutral', actions: [{ type: 'spend_edited', spend_id: r.spend_id }] }; }
       case 'correct_ask': return { text: 'I see two amounts there, so I have not changed anything. Tell me the right one like "change last to 50" and I will fix the last entry.', mood: 'neutral' };
@@ -699,7 +716,7 @@ function installAunty(B) {
     B.logAI(uid, 'chat', cfg.chatModel, inText, parsed.text, latency, outcome);
     turn.trace.final = parsed.text; turn.trace.mood = parsed.mood; turn.trace.outcome = outcome; turn.trace.latency_ms = latency; turn.trace.tokens_in = Math.ceil(inText.length / 4); turn.trace.tokens_out = Math.ceil(parsed.text.length / 4);
     B.lastTrace = turn.trace;
-    const actions = (out.actions || []).slice(); const mutated = results.some(r => r && (r.saved || r.undone || r.edited || r.marked || r.streak));
+    const actions = (out.actions || []).slice(); const mutated = results.some(r => r && (r.saved || r.undone || r.edited || r.set || r.marked || r.streak));
     return { replies, actions, summary_changed: mutated, tpl: turn.tpl, mood: parsed.mood, popup: out.popup || null };
   }
   // AI is down: the basic parser still logs a plain spend and replies with a short canned line

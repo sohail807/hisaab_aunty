@@ -256,6 +256,15 @@ async function runBackendTests() {
     const x3 = await chat(B, s, 'hello'); add(NI, '"hello" gets a greeting, not the income prompt', /namaste|hello/i.test(x3.b.replies[0].text) && x3.tools.length === 0, x3.b.replies[0].text);
     const x4 = await chat(B, s, 'can I buy shoes for 2k?'); add(NI, 'a purchase check needs an income, so it asks for one and saves nothing', x4.tools.length === 0 && /monthly income/i.test(x4.b.replies[0].text) && B.rawSpends(s.uid).length === 2, x4.b.replies[0].text);
     const x5 = await chat(B, s, 'how am i doing'); add(NI, 'a status question with no income asks for the income', /monthly income/i.test(x5.b.replies[0].text), x5.b.replies[0].text);
+    // telling Aunty what you earn sets the income; it is never logged as a spend
+    const x6 = await chat(B, s, 'me monthly 5000 kamata hu');
+    add(NI, '"me monthly 5000 kamata hu" sets the monthly income to 5000 and saves no spend', B.userById(s.uid).income_paise === 500000 && B.rawSpends(s.uid).length === 2 && x6.tools.length === 1 && x6.tools[0].name === 'set_income', x6.b.replies[0].text);
+    add(NI, 'the reply states the income and the daily number', /monthly income is ₹5,000/.test(x6.b.replies[0].text) && /a day to spend/.test(x6.b.replies[0].text), x6.b.replies[0].text);
+    const x7 = await chat(B, s, 'chai 30'); add(NI, 'after the income is set, a spend shows what is left and no longer says the income is unknown', x7.tools[0].name === 'log_spend' && !/do not know your monthly income/i.test(x7.b.replies[0].text), x7.b.replies[0].text);
+    const x8 = await chat(B, s, 'my salary is now 50000'); add(NI, 'once an income exists, a sentence cannot change it: Aunty points to Settings', B.userById(s.uid).income_paise === 500000 && /Settings/.test(x8.b.replies[0].text), x8.b.replies[0].text);
+    for (const [m, inc] of [['40k', 4000000], ['I earn 40k a month', 4000000], ['meri salary 30000 hai', 3000000], ['monthly income 25k', 2500000], ['main 20000 kamata hu', 2000000]]) {
+      const B2 = mk(); const s2 = await signup(B2, 'n' + inc + '@x.com'); B2.db.update('app_user', B2.userById(s2.uid), { flow: null, income_paise: null });
+      const y = await chat(B2, s2, m); add(NI, `"${m}" sets the income to ${inc / 100} and saves no spend`, B2.userById(s2.uid).income_paise === inc && B2.rawSpends(s2.uid).length === 0, y.b.replies[0].text); }
   }
 
   // ===== Aunty evaluation set =====
