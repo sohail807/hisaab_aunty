@@ -125,7 +125,7 @@ The model only proposes. A parser reads clear messages first, and a validator ch
 
 ## 11. How the tests were done
 
-- **Statement questions:** real statements of 20 companies not used in training, 12 US and Indian technology and consumer companies (for example Roblox, Twilio, Okta, Cloudflare, Tata Elxsi, KPIT, Persistent). The correct answer is computed in code. A model answer counts as right if it is within about 0.5% (or 0.15 percentage points for percentages).
+- **Statement questions:** real statements of 20 US and Indian companies not used in training (for example Roblox, Twilio, Okta, Cloudflare, Tata Elxsi, KPIT, Persistent). The correct answer is computed in code. A model answer counts as right if it is within about 0.5% (or 0.15 percentage points for percentages).
 - **Term questions:** 60 multiple-choice questions with four options each, shuffled the same way for every model, answered with a single letter.
 - **Settings:** the same prompts, greedy decoding (no randomness) and the same laptop for all three models, one model at a time.
 
