@@ -63,6 +63,8 @@ We tested the original model, round 1, and the new round 2 finance model with th
 | Median reply time for a chat message | 8 s | 5.7 s | 6.4 s |
 | Average time for a statement answer | 38 s | 38 s | **22 s** |
 
+**Why the original model is not at 0% in test A.** It already knows basic finance from its general training, and many questions state the formula in the question itself, so a general model can divide the numbers about half the time. The original did well on one-step ratios (asset turnover 3 of 3, debt-to-equity 2 of 2) and scored 0 on the multi-step ones (revenue growth 0 of 3, cash conversion 0 of 3, quick ratio 0 of 2). The training effect is the move from 46% to 75%, and from 3 of 10 to 8 of 10 on Indian companies.
+
 **C. Eight general questions** (judged by us; accuracy of tax figures should be confirmed by a CA):
 
 | Question | Original | Round 1 | Round 2 |
