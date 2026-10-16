@@ -342,7 +342,9 @@ function installAunty(B) {
     if (hasAmt && !/\b(paid|spent|bought|kharcha kiya|kharch kiya|diya|liya)\b/.test(t) && /\b(lu|lun|loon|le lu|le lun|leloon|kharidu|khareedu|kharid lu|karu|kar lu|le sakta hu|le sakti hu|lena chahiye)\s*(ya(?: nahi| na| nhi)?\b|\?)|\b(kya main|main)\b.{0,25}\b(lu|lun|loon|kharidu)\b/.test(t)) return S('check', { calls: [{ name: 'check_purchase', input: { amount_inr: amounts[0].value, label: noteFrom(msg.replace(/\b(arre|yaar|bhai|sun|kya|ya nahi|ya na|ya nhi|please|plz|pls|lu|lun|loon|le|kharidu|ka|ki|ke|rs)\b|[?]/gi, ' ')) } }] });
     const spendVerb = /\b(paid|spent|bought|ordered|gave|sent|kharcha)\b/.test(t);
     const adviceAsk = /\?|\b(should|which|best|better|kaun|konsa|kaisa|kaise|how|recommend|suggest|advice|salah|worth|lun|lu ya|lena chahiye|chahiye|shuru|start)\b/i.test(t);
-    if (ADVICE_RE.test(msg) && !(spendVerb && hasAmt) && !(hasAmt && !adviceAsk)) return S('advice');   // "EMI 5000" or "SIP 2000" is a payment to log; asking what to buy is advice
+    // a pure knowledge question ("what is free cash flow?", "EMI aur SIP me kya fark hai?", "Section 80C kya hota hai?"): the model explains it. Personal money questions and "what should I buy" are not this.
+    const knowQ = !hasAmt && /^(what('?s| is| are| does| do)\b|explain\b|define\b|difference between\b|meaning of\b|tell me about\b|how (is|are|do|does)\b.{0,40}\b(calculated|computed|work|works)\b)|\b(kya (hota|hoti|hote|hai|hain)|kya fark|fark kya|ka matlab|matlab kya|samjhao|samjha do|kaise (nikalte|nikalta|calculate|kaam)|kya antar|antar kya)\b/i.test(t) && !/\b(my|mera|meri|mere|mujhe|main|mai|aaj|today|kal|yesterday|left|bacha|spent|kharch\w*|budget|streak|recap|aunty|hisaab|should|best)\b/i.test(t);
+    if (ADVICE_RE.test(msg) && !knowQ && !(spendVerb && hasAmt) && !(hasAmt && !adviceAsk)) return S('advice');   // "EMI 5000" or "SIP 2000" is a payment to log; asking what to buy is advice
     if (/\b(stupid|idiot|shut up|useless|hate you|dumb|bakwas|bekaar|pagal)\b|\bf+u+c+k|\bbitch/.test(t)) return S('abuse');
     const serious = SERIOUS_RE.test(msg); const selfHarm = SELFHARM_RE.test(msg);
     if (selfHarm || (serious && !hasAmt)) return S('distress', { selfHarm });
@@ -397,6 +399,7 @@ function installAunty(B) {
     if (/(how|where).{0,25}(data|stored|saved)|where does.{0,10}data/.test(t)) return S('app', { id: 'stored' });
     if (/\b(export|download)\b.{0,20}data|delete my (data|account)|erase my/.test(t)) return S('app', { id: 'data' });
     if (/(what does|what is|explain).{0,20}(spend tab|goal tab|screen|gauge|tab)|how does (this|hisaab|aunty|the app) work|what can you do|\bhelp\b/.test(t)) return S('app', { id: /tab|screen|gauge/.test(t) ? 'screens' : 'help' });
+    if (knowQ) return S('knowledge', { question: msg.slice(0, 300) });
     if (/\b(streak|no.?spend days?)\b/.test(t)) return S('streak', { calls: [{ name: 'get_streak', input: {} }] });
     if (/\b(recap|weekly summary)\b/.test(t)) return S('recap', { calls: [{ name: 'get_latest_recap', input: {} }] });
     if (/(past|recent|last|previous) nudges?|what did you (nudge|warn)/.test(t)) return S('nudges', { calls: [{ name: 'get_recent_nudges', input: { limit: 3 } }] });
@@ -705,6 +708,16 @@ function installAunty(B) {
     return keep.join(' ').trim();
   }
 
+  // A knowledge answer from the model, made chat-sized: no markdown, no repeated sentences, at most about 110 words, plus a short honesty note.
+  function tidyAnswer(raw) {
+    let t = String(raw || '').replace(/[*#`_]+/g, '').replace(/\s*\n+\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    const seen = new Set(), keep = [];
+    for (const s of t.split(/(?<=[.!?])\s+/)) { const k = s.toLowerCase().replace(/[^a-z0-9]/g, ''); if (k.length < 2 || seen.has(k)) continue; seen.add(k); keep.push(s); }
+    let out = '', words = 0;
+    for (const s of keep) { const w = s.split(/\s+/).length; if (words + w > 110 && out) break; out += (out ? ' ' : '') + s; words += w; }
+    return out.length < 12 ? '' : out + ' (General information from my AI brain, so please double-check it before relying on it.)';
+  }
+
   // ---------- the request loop ----------
   async function auntyTurn(uid, msg, cid) {
     const c0 = B.ctxFor(uid), u = c0.user; const t0 = performance.now();
@@ -725,6 +738,19 @@ function installAunty(B) {
           turn.trace.slm = { proposal: r.obj, accepted: v.ok, reason: v.reason || null, ms, tokens_in: r.tokens_in || null, tokens_out: r.tokens_out || null, model: r.model || null };
           B.logAI(uid, 'chat_slm', r.model || 'slm', msg, JSON.stringify(r.obj || {}), ms, v.ok ? 'ok' : 'rejected');
           plan = v.ok ? v.plan : { kind: 'fallback_unsure', calls: [] };
+        } catch (e) { turn.trace.slm = { error: String(e.message || e).slice(0, 120), accepted: false }; B.logAI(uid, 'chat_slm', 'slm', msg, '', Math.round(performance.now() - t1), 'ai_error'); plan = { kind: 'slm_down', calls: [] }; }
+      }
+    }
+    if (plan.kind === 'knowledge') {                     // general finance knowledge: the model answers in plain words. No tools, no writes, none of the user's money.
+      if (!B.llm || !B.llm.configured() || !B.llm.explain) { plan = { kind: 'no_brain', calls: [] }; B.logAI(uid, 'chat', 'none', msg, '', 1, 'llm_not_linked'); }
+      else {
+        const t1 = performance.now();
+        try {
+          const r = await B.llm.explain(plan.question), ms = r.ms || Math.round(performance.now() - t1), text = tidyAnswer(r.text);
+          turn.trace.slm = { proposal: { intent: 'explain' }, accepted: !!text, reason: text ? null : 'empty answer', ms, tokens_in: r.tokens_in || null, tokens_out: r.tokens_out || null, model: r.model || null };
+          B.logAI(uid, 'chat_slm', r.model || 'slm', msg, '[explain]', ms, text ? 'ok' : 'rejected');
+          if (text) { turn.trace.plan = 'knowledge'; turn.trace.final = text; turn.trace.outcome = 'ok'; B.lastTrace = turn.trace; return { replies: [{ text, mood: 'neutral' }], actions: [], summary_changed: false, tpl: [], mood: 'neutral', popup: null }; }
+          plan = { kind: 'fallback_unsure', calls: [] };
         } catch (e) { turn.trace.slm = { error: String(e.message || e).slice(0, 120), accepted: false }; B.logAI(uid, 'chat_slm', 'slm', msg, '', Math.round(performance.now() - t1), 'ai_error'); plan = { kind: 'slm_down', calls: [] }; }
       }
     }

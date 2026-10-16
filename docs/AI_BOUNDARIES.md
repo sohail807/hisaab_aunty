@@ -393,3 +393,18 @@ The prototype currently runs **269 automated checks** covering most of the above
 8. Never joke in a serious moment; stay calm for bills and emergencies.
 9. Never show a technical error; fail kindly and keep the parser alive.
 10. Never let the model, any model, hold the key to the database or the API key in the app.
+
+## Decision: knowledge answers (status: Needs sign-off)
+
+Date: 2026-10-16. Product owner decision, pending lawyer and engineering-lead sign-off (see the golden rules in CLAUDE.md).
+
+Until now Aunty refused questions that mention investments, loans, insurance or tax. The product owner wants the model to be knowledgeable about finance, Indian tax and banking terms, so pure knowledge questions now go to the model ("what is free cash flow?", "EMI aur SIP me kya fark hai?", "Section 80C kya hota hai?").
+
+What stays the same:
+- The model never writes anything and never calls a tool on this route. No spend, goal, limit or memory is changed.
+- It never sees the user's money, history or memories. The input is only the question text.
+- Personal budget questions, spends and "should I buy or invest" style questions use the old paths. "Should I invest in mutual funds?" still gets the polite decline.
+- Every knowledge answer is cut to about 110 words, repeated sentences and markdown are removed, and it ends with a short note that it is general information to double-check.
+- If no model is linked, or it is down, the friendly "language brain" lines are used.
+
+Known limits (measured on 16 Oct 2026, see MODEL_PROGRESS_REPORT.md): the model is reliable on statement ratios and basic terms, but still gets some definitions wrong (free cash flow, EMI vs SIP) and writes weak Hinglish for finance. A CA review of its tax answers is still needed.

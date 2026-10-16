@@ -1,5 +1,12 @@
 [
   {
+    "id": "team-finance-f16",
+    "label": "Team model, finance + Hinglish (about 3B, full precision)",
+    "base_url": "http://127.0.0.1:8082/v1",
+    "model": "team-finance-f16",
+    "key_env": "LLM_API_KEY"
+  },
+  {
     "id": "team-model-f16",
     "label": "Team model (about 3B, full precision)",
     "base_url": "http://127.0.0.1:8081/v1",

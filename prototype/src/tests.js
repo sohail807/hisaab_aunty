@@ -198,6 +198,21 @@ async function runBackendTests() {
       add(SL, 'without a linked LLM, free-form chat says the API key is needed and does nothing else', x.tools.length === 0 && /not linked yet/.test(x.b.replies[0].text) && /API key/.test(x.b.replies[0].text) && B.db.where('ai_call_log', l => l.outcome === 'llm_not_linked').length === 1, x.b.replies[0].text);
       x = await chat(B, s, 'chai 30'); add(SL, 'without a linked LLM, clear messages still work through the parser', x.tools[0].name === 'log_spend' && x.b.summary_changed);
       add(SL, 'a model-less server still passes the "ask the user" cases', (await chat(B, s, 'paid Rohan')).b.replies[0].text.includes('How much')); }
+    // knowledge questions ("what is free cash flow?"): the model explains in plain words, nothing is saved; personal, advice and app questions are not this route
+    { const KN = 'Knowledge questions';
+      const mkK = (fn) => { const l = mkLLM(async () => ({ intent: 'unknown' })); l.asked = null; l.explain = async (q) => { l.asked = q; return fn(q); }; return l; };
+      const ans = '**Free cash flow** is the cash left after a company pays for its operations and its investments.\n\nFree cash flow is the cash left after a company pays for its operations and its investments. It is operating cash flow minus capital expenditure.';
+      const { B, s } = await setup(mkK(async () => ({ text: ans, ms: 100, model: 'fake-slm' }))); const n0 = B.rawSpends(s.uid).length;
+      for (const m of ['what is free cash flow?', 'EMI aur SIP me kya fark hota hai?', 'Section 80C kya hota hai?', 'what is a balance sheet?', 'explain current ratio']) {
+        B.llm.asked = null; const x = await chat(B, s, m), r = x.b.replies[0].text;
+        add(KN, `"${m}" is answered by the model as a knowledge question`, B.llm.asked === m && /cash left after/.test(r) && /double-check/.test(r) && x.tools.length === 0, r); }
+      { B.llm.asked = null; const r = (await chat(B, s, 'what is free cash flow?')).b.replies[0].text; add(KN, 'the answer is tidied: no markdown, no repeated sentence, a short note at the end', !/\*/.test(r) && r.split('cash left after').length === 2 && r.length < 700, r); }
+      add(KN, 'knowledge answers never save anything', B.rawSpends(s.uid).length === n0);
+      for (const m of ['what is left today?', 'what is my budget', 'should I invest in mutual funds?', 'which SIP is best?', 'what is a no-spend day?', 'kitna bacha hai aaj']) { B.llm.asked = null; await chat(B, s, m); add(KN, `"${m}" does not use the knowledge route`, B.llm.asked === null); }
+      { const x = await chat(B, s, 'SIP 2000'); add(KN, '"SIP 2000" is still a payment to log, not a question', x.tools.length === 1 && x.tools[0].name === 'log_spend'); } }
+    { const KN = 'Knowledge questions'; const { B, s } = await setup(); const x = await chat(B, s, 'what is free cash flow?'); add(KN, 'with no model linked, a knowledge question says the language brain is not linked', /not linked yet/.test(x.b.replies[0].text) && x.tools.length === 0, x.b.replies[0].text); }
+    { const KN = 'Knowledge questions'; const l = mkLLM(async () => ({ intent: 'unknown' })); l.explain = async () => { throw new Error('the language model took too long'); }; const { B, s } = await setup(l); const n0 = B.rawSpends(s.uid).length; const x = await chat(B, s, 'what is free cash flow?');
+      add(KN, 'if the model is down, a knowledge question gets a friendly line and nothing is saved', x.b.replies[0].text.length > 5 && !/took too long|Error/.test(x.b.replies[0].text) && B.rawSpends(s.uid).length === n0, x.b.replies[0].text); }
     // 2. parser first: clear messages never reach the model
     { const llm = mkLLM(async () => ({ intent: 'unknown' })); const { B, s } = await setup(llm);
       await chat(B, s, 'chai 30'); await chat(B, s, 'how am i doing'); await chat(B, s, 'can I buy shoes for 2k?'); await chat(B, s, 'undo');

@@ -39,3 +39,7 @@ Browser page (5177)  ->  LLM proxy (8787)  ->  llama-server for each model (8080
 2. Compare with the official release: download the matching Qwen model from Hugging Face and compare file hashes or the weights. Same weights means unchanged; different weights means someone fine-tuned it.
 3. Test it. Run `node training/eval_model.js` on the Hinglish test set and write the results in Notion (Model tests). Tests show what it can do, not what it was trained on.
 4. Never assume it knows Indian tax or banking rules. Facts come from the CA-approved knowledge base.
+
+## Finance model (16 Oct 2026)
+
+`team-finance-f16` (Sent_model_finance, about 3B, full precision) runs on llama-server port **8082** (`-m Documents/Sent_model_finance/model-f16.gguf`) and is listed first in `models.json`. Start the proxy with `LLM_DEFAULT_MODEL=team-finance-f16` to make it the default. It needs about 6 GB of free memory, so stop other large models first.
