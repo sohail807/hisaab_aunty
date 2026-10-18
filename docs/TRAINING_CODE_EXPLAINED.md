@@ -1,3 +1,5 @@
+> **Note (18 Oct 2026):** this file describes the round-1 flow (old notebook). The current training flow, data and notebook are described in docs/HANDOVER.md, section 7.
+
 # The training code, explained line by line
 
 Audience: someone new to AI who wants to know exactly what every line does and why it is there.

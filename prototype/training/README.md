@@ -1,3 +1,5 @@
+> **Note (18 Oct 2026):** this file describes the round-1 flow (old notebook). The current training flow, data and notebook are described in docs/HANDOVER.md, section 7.
+
 # Hinglish training for the intent model
 
 The model's only job: turn one message into ONE JSON intent. Code does everything else. Training makes it better at Hinglish, typos and "is this a question or a spend?".

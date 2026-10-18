@@ -3,6 +3,7 @@
 Chat-first money coach for young Indians. A small language model only understands odd messages; code does all the maths.
 
 - Rules for AI assistants: [CLAUDE.md](CLAUDE.md)
+- **Start here for the full story: [docs/HANDOVER.md](docs/HANDOVER.md)**
 - Docs: [docs/](docs)
 - Runnable prototype: [prototype/](prototype)
 

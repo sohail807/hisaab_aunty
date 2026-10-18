@@ -1,0 +1,405 @@
+{
+ "system": "You are a careful financial analyst. Read the statement, show the formula and the working, and finish with a line starting 'Answer:'.",
+ "items": [
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Okta, Inc.",
+   "market": "USD",
+   "year": "2026",
+   "user": "Okta, Inc. - financial statements, fiscal year 2026 (USD millions)\n\nIncome statement:\nRevenue: 2,919.0\nCost of revenue: 661.0\nGross profit: 2,258.0\nResearch and development: 639.0\nOperating income: 149.0\nNet income: 235.0\n\nBalance sheet:\nCash and equivalents: 858.0\nAccounts receivable: 687.0\nTotal current assets: 3,644.0\nProperty, plant and equipment (net): 38.0\nGoodwill: 5,487.0\nTotal assets: 9,710.0\nAccounts payable: 12.0\nTotal current liabilities: 2,554.0\nTotal liabilities: 2,711.0\nRetained earnings: -2,567.0\nTotal shareholders' equity: 6,999.0\n\nCash flow statement:\nNet cash from operating activities: 884.0\nCapital expenditure: 9.0\nShare repurchases: 73.0\n\nQuestion: What is the current ratio, and what does it say about liquidity?",
+   "truth": 1.43,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Upstart Holdings, Inc.",
+   "market": "USD",
+   "year": "2023",
+   "user": "Upstart Holdings, Inc. - financial statements, fiscal year 2023 (USD millions)\n\nIncome statement:\nRevenue: 513.6\nResearch and development: 280.1\nOperating income: -256.5\nInterest expense: 34.9\nNet income: -240.1\n\nBalance sheet:\nCash and equivalents: 368.4\nProperty, plant and equipment (net): 42.7\nGoodwill: 67.1\nTotal assets: 2,017.1\nTotal liabilities: 1,381.8\nRetained earnings: -282.6\nTotal shareholders' equity: 635.3\n\nCash flow statement:\nNet cash from operating activities: -111.7\nDepreciation and amortization: 24.9\nCapital expenditure: 1.5\nShare repurchases: 0.0\n\nQuestion: What is the asset turnover ratio?",
+   "truth": 0.25,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "CESC Limited",
+   "market": "INR",
+   "year": "2024",
+   "user": "CESC Limited - financial statements, fiscal year 2024 (INR crores)\n\nIncome statement:\nRevenue: 15,293.2\nCost of revenue: 10,535.1\nGross profit: 4,758.1\nSelling, general and administrative expenses: 37.3\nOperating income: 1,103.9\nInterest expense: 1,327.8\nNet income: 1,376.3\n\nBalance sheet:\nCash and equivalents: 1,275.4\nAccounts receivable: 2,256.4\nInventory: 878.5\nTotal current assets: 6,596.9\nProperty, plant and equipment (net): 22,240.7\nGoodwill: 0.0\nTotal assets: 37,167.8\nAccounts payable: 1,271.9\nTotal current liabilities: 6,805.2\nLong-term debt: 10,856.1\nTotal liabilities: 25,182.4\nRetained earnings: 12,172.7\nTotal shareholders' equity: 11,445.6\n\nCash flow statement:\nNet cash from operating activities: 2,351.4\nDepreciation and amortization: 1,465.9\nCapital expenditure: 771.2\nDividends paid: 606.2\n\nQuestion: Revenue was 14,246.35 the previous year. What was the year-on-year revenue growth?",
+   "truth": 7.3,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Mazagon Dock Shipbuilders Limited",
+   "market": "INR",
+   "year": "2024",
+   "user": "Mazagon Dock Shipbuilders Limited - financial statements, fiscal year 2024 (INR crores)\n\nIncome statement:\nRevenue: 9,068.0\nCost of revenue: 6,633.8\nGross profit: 2,434.2\nSelling, general and administrative expenses: 102.8\nOperating income: 1,338.0\nInterest expense: 8.8\nNet income: 1,937.0\n\nBalance sheet:\nCash and equivalents: 5,218.5\nAccounts receivable: 1,846.9\nInventory: 5,713.4\nTotal current assets: 25,788.2\nProperty, plant and equipment (net): 887.8\nTotal assets: 29,448.8\nAccounts payable: 4,430.4\nTotal current liabilities: 22,618.7\nTotal liabilities: 23,205.3\nRetained earnings: 3,653.5\nTotal shareholders' equity: 6,243.5\n\nCash flow statement:\nNet cash from operating activities: 683.8\nDepreciation and amortization: 83.1\nCapital expenditure: 10.0\nDividends paid: 447.8\n\nQuestion: What share of net income was paid out as dividends (payout ratio)?",
+   "truth": 23.1,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Tata Elxsi Limited",
+   "market": "INR",
+   "year": "2025",
+   "user": "Tata Elxsi Limited - financial statements, fiscal year 2025 (INR crores)\n\nIncome statement:\nRevenue: 3,729.0\nCost of revenue: 2,169.1\nGross profit: 1,560.0\nSelling, general and administrative expenses: 219.1\nOperating income: 900.7\nInterest expense: 19.0\nNet income: 784.9\n\nBalance sheet:\nCash and equivalents: 134.9\nAccounts receivable: 801.9\nInventory: 0.0\nTotal current assets: 2,797.5\nProperty, plant and equipment (net): 310.9\nTotal assets: 3,585.7\nAccounts payable: 123.0\nTotal current liabilities: 529.7\nTotal liabilities: 725.7\nRetained earnings: 2,621.4\nTotal shareholders' equity: 2,860.0\n\nCash flow statement:\nNet cash from operating activities: 812.0\nDepreciation and amortization: 104.9\nCapital expenditure: 16.3\nDividends paid: 435.9\n\nQuestion: Is the net income backed by operating cash flow? Give the cash conversion ratio.",
+   "truth": 1.03,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Asana, Inc.",
+   "market": "USD",
+   "year": "2024",
+   "user": "Asana, Inc. - financial statements, fiscal year 2024 (USD millions)\n\nIncome statement:\nRevenue: 652.5\nCost of revenue: 64.5\nGross profit: 588.0\nResearch and development: 324.7\nOperating income: -270.0\nInterest expense: 4.0\nNet income: -257.0\n\nBalance sheet:\nCash and equivalents: 236.7\nAccounts receivable: 88.3\nTotal current assets: 659.7\nProperty, plant and equipment (net): 96.5\nTotal assets: 962.0\nAccounts payable: 6.9\nTotal current liabilities: 367.2\nTotal liabilities: 635.6\nRetained earnings: -1,494.6\nTotal shareholders' equity: 326.4\n\nCash flow statement:\nNet cash from operating activities: -17.9\nDepreciation and amortization: 14.3\nCapital expenditure: 7.7\nShare repurchases: 0.0\n\nQuestion: Revenue was 547.21 the previous year. What was the year-on-year revenue growth?",
+   "truth": 19.2,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Crompton Greaves Consumer Electricals Limited",
+   "market": "INR",
+   "year": "2024",
+   "user": "Crompton Greaves Consumer Electricals Limited - financial statements, fiscal year 2024 (INR crores)\n\nIncome statement:\nRevenue: 7,273.7\nCost of revenue: 5,015.4\nGross profit: 2,258.4\nSelling, general and administrative expenses: 729.6\nOperating income: 594.1\nInterest expense: 78.6\nNet income: 439.9\n\nBalance sheet:\nCash and equivalents: 172.1\nAccounts receivable: 720.9\nInventory: 830.4\nTotal current assets: 2,704.8\nProperty, plant and equipment (net): 497.1\nGoodwill: 1,285.5\nTotal assets: 6,081.7\nAccounts payable: 1,314.5\nTotal current liabilities: 2,063.3\nLong-term debt: 299.0\nTotal liabilities: 2,632.7\nRetained earnings: 2,432.7\nTotal shareholders' equity: 2,999.6\n\nCash flow statement:\nNet cash from operating activities: 843.4\nDepreciation and amortization: 128.8\nCapital expenditure: 83.8\nDividends paid: 191.2\n\nQuestion: What is the net debt (INR crores), taking long-term debt less cash?",
+   "truth": 126.91,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Laurus Labs Limited",
+   "market": "INR",
+   "year": "2026",
+   "user": "Laurus Labs Limited - financial statements, fiscal year 2026 (INR crores)\n\nIncome statement:\nRevenue: 6,721.2\nCost of revenue: 2,763.6\nGross profit: 3,957.6\nSelling, general and administrative expenses: 243.1\nResearch and development: 27.7\nOperating income: 1,306.4\nInterest expense: 161.1\nNet income: 888.8\n\nBalance sheet:\nCash and equivalents: 112.7\nAccounts receivable: 2,154.9\nInventory: 2,342.2\nTotal current assets: 4,829.2\nProperty, plant and equipment (net): 4,879.2\nGoodwill: 246.3\nTotal assets: 10,511.2\nAccounts payable: 1,252.1\nTotal current liabilities: 3,635.4\nLong-term debt: 611.3\nTotal liabilities: 5,079.8\nRetained earnings: 4,428.9\nTotal shareholders' equity: 5,300.1\n\nCash flow statement:\nNet cash from operating activities: 1,623.5\nDepreciation and amortization: 480.1\nCapital expenditure: 1,070.0\nDividends paid: 86.3\n\nQuestion: What share of net income was paid out as dividends (payout ratio)?",
+   "truth": 9.7,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Tata Elxsi Limited",
+   "market": "INR",
+   "year": "2024",
+   "user": "Tata Elxsi Limited - financial statements, fiscal year 2024 (INR crores)\n\nIncome statement:\nRevenue: 3,552.1\nCost of revenue: 2,004.9\nGross profit: 1,547.3\nSelling, general and administrative expenses: 187.0\nOperating income: 959.4\nInterest expense: 20.3\nNet income: 792.2\n\nBalance sheet:\nCash and equivalents: 132.9\nAccounts receivable: 827.7\nInventory: 1.1\nTotal current assets: 2,536.7\nProperty, plant and equipment (net): 385.4\nTotal assets: 3,187.0\nAccounts payable: 85.6\nTotal current liabilities: 445.9\nTotal liabilities: 681.3\nRetained earnings: 2,307.0\nTotal shareholders' equity: 2,505.7\n\nCash flow statement:\nNet cash from operating activities: 701.2\nDepreciation and amortization: 99.4\nCapital expenditure: 83.0\nDividends paid: 377.4\n\nQuestion: Calculate the gross margin.",
+   "truth": 43.6,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Twilio Inc.",
+   "market": "USD",
+   "year": "2022",
+   "user": "Twilio Inc. - financial statements, fiscal year 2022 (USD millions)\n\nIncome statement:\nCost of revenue: 2,012.7\nGross profit: 1,813.6\nResearch and development: 1,079.1\nOperating income: -1,205.3\nNet income: -1,256.1\n\nBalance sheet:\nCash and equivalents: 651.8\nAccounts receivable: 547.5\nTotal current assets: 4,984.1\nGoodwill: 5,284.2\nTotal assets: 12,564.3\nAccounts payable: 124.6\nTotal current liabilities: 808.2\nLong-term debt: 987.4\nTotal liabilities: 2,005.3\nRetained earnings: -3,375.8\nTotal shareholders' equity: 10,559.0\n\nCash flow statement:\nNet cash from operating activities: -254.4\nDepreciation and amortization: 279.1\nShare repurchases: 0.0\n\nQuestion: Compute the return on equity (ROE).",
+   "truth": -11.9,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Persistent Systems Limited",
+   "market": "INR",
+   "year": "2023",
+   "user": "Persistent Systems Limited - financial statements, fiscal year 2023 (INR crores)\n\nIncome statement:\nRevenue: 8,350.6\nCost of revenue: 5,965.2\nGross profit: 2,385.4\nSelling, general and administrative expenses: 130.4\nOperating income: 1,258.7\nInterest expense: 47.3\nNet income: 921.1\n\nBalance sheet:\nCash and equivalents: 467.0\nAccounts receivable: 1,525.3\nTotal current assets: 3,446.6\nProperty, plant and equipment (net): 784.9\nGoodwill: 718.4\nTotal assets: 6,673.1\nAccounts payable: 568.9\nTotal current liabilities: 2,012.9\nLong-term debt: 205.8\nTotal liabilities: 2,708.0\nRetained earnings: 1,660.7\nTotal shareholders' equity: 3,965.1\n\nCash flow statement:\nNet cash from operating activities: 955.8\nDepreciation and amortization: 271.9\nCapital expenditure: 433.3\nDividends paid: 298.1\n\nQuestion: What share of net income was paid out as dividends (payout ratio)?",
+   "truth": 32.4,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Crompton Greaves Consumer Electricals Limited",
+   "market": "INR",
+   "year": "2025",
+   "user": "Crompton Greaves Consumer Electricals Limited - financial statements, fiscal year 2025 (INR crores)\n\nIncome statement:\nRevenue: 7,826.8\nCost of revenue: 5,286.9\nGross profit: 2,539.9\nSelling, general and administrative expenses: 755.4\nOperating income: 777.6\nInterest expense: 47.8\nNet income: 556.0\n\nBalance sheet:\nCash and equivalents: 203.7\nAccounts receivable: 702.4\nInventory: 881.7\nTotal current assets: 2,874.8\nProperty, plant and equipment (net): 625.8\nGoodwill: 1,285.5\nTotal assets: 6,346.1\nAccounts payable: 1,395.7\nTotal current liabilities: 2,159.0\nLong-term debt: 0.0\nTotal liabilities: 2,498.4\nRetained earnings: 2,797.5\nTotal shareholders' equity: 3,390.1\n\nCash flow statement:\nNet cash from operating activities: 749.9\nDepreciation and amortization: 152.8\nCapital expenditure: 109.5\nDividends paid: 193.0\n\nQuestion: Net income was 439.92 the previous year. How much did it grow or fall?",
+   "truth": 26.4,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Syngene International Limited",
+   "market": "INR",
+   "year": "2026",
+   "user": "Syngene International Limited - financial statements, fiscal year 2026 (INR crores)\n\nIncome statement:\nRevenue: 3,610.7\nCost of revenue: 918.6\nGross profit: 2,692.1\nSelling, general and administrative expenses: 204.9\nOperating income: 557.3\nInterest expense: 44.8\nNet income: 316.7\n\nBalance sheet:\nCash and equivalents: 228.6\nAccounts receivable: 508.8\nInventory: 141.3\nTotal current assets: 2,142.8\nProperty, plant and equipment (net): 3,975.6\nTotal assets: 7,054.7\nAccounts payable: 347.5\nTotal current liabilities: 1,552.3\nTotal liabilities: 2,215.7\nRetained earnings: 4,148.6\nTotal shareholders' equity: 4,839.0\n\nCash flow statement:\nNet cash from operating activities: 915.2\nDepreciation and amortization: 452.9\nCapital expenditure: 368.2\nDividends paid: 50.4\n\nQuestion: What is the free cash flow (INR crores)?",
+   "truth": 547.0,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Cloudflare, Inc.",
+   "market": "USD",
+   "year": "2022",
+   "user": "Cloudflare, Inc. - financial statements, fiscal year 2022 (USD millions)\n\nIncome statement:\nRevenue: 975.2\nCost of revenue: 232.6\nGross profit: 742.6\nResearch and development: 298.3\nOperating income: -201.2\nInterest expense: 5.0\nNet income: -193.4\n\nBalance sheet:\nCash and equivalents: 204.2\nAccounts receivable: 148.5\nTotal current assets: 1,887.9\nProperty, plant and equipment (net): 286.6\nGoodwill: 148.0\nTotal assets: 2,587.9\nAccounts payable: 35.6\nTotal current liabilities: 397.9\nTotal liabilities: 1,963.9\nRetained earnings: -839.9\nTotal shareholders' equity: 624.0\n\nCash flow statement:\nNet cash from operating activities: 123.6\nDepreciation and amortization: 102.3\nCapital expenditure: 143.6\nShare repurchases: 0.0\n\nQuestion: What is the free cash flow (USD millions)?",
+   "truth": -20.01,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Central Depository Services (India) Limited",
+   "market": "INR",
+   "year": "2024",
+   "user": "Central Depository Services (India) Limited - financial statements, fiscal year 2024 (INR crores)\n\nIncome statement:\nRevenue: 812.3\nCost of revenue: 185.4\nGross profit: 626.9\nSelling, general and administrative expenses: 22.2\nOperating income: 462.2\nInterest expense: 0.1\nNet income: 419.1\n\nBalance sheet:\nCash and equivalents: 11.8\nAccounts receivable: 28.6\nTotal current assets: 798.6\nProperty, plant and equipment (net): 313.5\nTotal assets: 1,781.6\nAccounts payable: 28.0\nTotal current liabilities: 240.0\nTotal liabilities: 274.5\nRetained earnings: 1,349.7\nTotal shareholders' equity: 1,463.3\n\nCash flow statement:\nNet cash from operating activities: 385.9\nDepreciation and amortization: 27.2\nCapital expenditure: 73.5\nDividends paid: 167.2\n\nQuestion: What share of net income was paid out as dividends (payout ratio)?",
+   "truth": 39.9,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "UiPath, Inc.",
+   "market": "USD",
+   "year": "2026",
+   "user": "UiPath, Inc. - financial statements, fiscal year 2026 (USD millions)\n\nIncome statement:\nRevenue: 1,610.6\nCost of revenue: 271.0\nGross profit: 1,339.6\nResearch and development: 385.2\nOperating income: 56.8\nNet income: 282.3\n\nBalance sheet:\nCash and equivalents: 871.2\nAccounts receivable: 488.3\nTotal current assets: 2,243.9\nProperty, plant and equipment (net): 46.0\nGoodwill: 125.3\nTotal assets: 3,179.2\nAccounts payable: 10.2\nTotal current liabilities: 905.4\nTotal liabilities: 1,096.6\nRetained earnings: -1,705.5\nTotal shareholders' equity: 2,082.6\n\nCash flow statement:\nNet cash from operating activities: 371.2\nDepreciation and amortization: 17.0\nCapital expenditure: 19.0\nShare repurchases: 329.1\n\nQuestion: How many days of sales are tied up in receivables (days sales outstanding)?",
+   "truth": 110.65,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Hims & Hers Health, Inc.",
+   "market": "USD",
+   "year": "2024",
+   "user": "Hims & Hers Health, Inc. - financial statements, fiscal year 2024 (USD millions)\n\nIncome statement:\nRevenue: 1,476.5\nCost of revenue: 303.4\nGross profit: 1,173.1\nOperating income: 61.9\nNet income: 126.0\n\nBalance sheet:\nCash and equivalents: 220.6\nAccounts receivable: 6.1\nInventory: 64.4\nTotal current assets: 395.8\nGoodwill: 112.7\nTotal assets: 707.5\nAccounts payable: 91.2\nTotal current liabilities: 221.4\nTotal liabilities: 230.8\nRetained earnings: -242.1\nTotal shareholders' equity: 476.7\n\nCash flow statement:\nNet cash from operating activities: 251.1\nDepreciation and amortization: 17.1\nCapital expenditure: 52.8\nShare repurchases: 83.0\n\nQuestion: What is the current ratio, and what does it say about liquidity?",
+   "truth": 1.79,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Cloudflare, Inc.",
+   "market": "USD",
+   "year": "2024",
+   "user": "Cloudflare, Inc. - financial statements, fiscal year 2024 (USD millions)\n\nIncome statement:\nRevenue: 1,669.6\nCost of revenue: 378.7\nGross profit: 1,290.9\nResearch and development: 421.4\nOperating income: -154.8\nNet income: -78.8\n\nBalance sheet:\nCash and equivalents: 147.7\nAccounts receivable: 316.8\nTotal current assets: 2,269.0\nProperty, plant and equipment (net): 467.4\nGoodwill: 181.1\nTotal assets: 3,301.2\nAccounts payable: 105.8\nTotal current liabilities: 793.7\nTotal liabilities: 2,255.0\nRetained earnings: -1,102.6\nTotal shareholders' equity: 1,046.2\n\nCash flow statement:\nNet cash from operating activities: 380.4\nDepreciation and amortization: 127.7\nCapital expenditure: 185.0\nShare repurchases: 0.0\n\nQuestion: Compute the return on assets (ROA).",
+   "truth": -2.4,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Zensar Technologies Limited",
+   "market": "INR",
+   "year": "2025",
+   "user": "Zensar Technologies Limited - financial statements, fiscal year 2025 (INR crores)\n\nIncome statement:\nRevenue: 5,280.6\nCost of revenue: 3,845.3\nGross profit: 1,435.3\nSelling, general and administrative expenses: 112.0\nOperating income: 730.7\nInterest expense: 15.5\nNet income: 649.8\n\nBalance sheet:\nCash and equivalents: 270.8\nAccounts receivable: 790.1\nTotal current assets: 3,314.6\nProperty, plant and equipment (net): 190.1\nGoodwill: 914.4\nTotal assets: 5,172.9\nAccounts payable: 343.7\nTotal current liabilities: 882.2\nTotal liabilities: 1,103.2\nRetained earnings: 2,690.4\nTotal shareholders' equity: 4,069.7\n\nCash flow statement:\nNet cash from operating activities: 565.0\nDepreciation and amortization: 101.9\nCapital expenditure: 36.9\nDividends paid: 204.1\nShare repurchases: 0.0\n\nQuestion: What is the free cash flow (INR crores)?",
+   "truth": 528.1,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "Crompton Greaves Consumer Electricals Limited",
+   "market": "INR",
+   "year": "2025",
+   "user": "Crompton Greaves Consumer Electricals Limited - financial statements, fiscal year 2025 (INR crores)\n\nIncome statement:\nRevenue: 7,826.8\nCost of revenue: 5,286.9\nGross profit: 2,539.9\nSelling, general and administrative expenses: 755.4\nOperating income: 777.6\nInterest expense: 47.8\nNet income: 556.0\n\nBalance sheet:\nCash and equivalents: 203.7\nAccounts receivable: 702.4\nInventory: 881.7\nTotal current assets: 2,874.8\nProperty, plant and equipment (net): 625.8\nGoodwill: 1,285.5\nTotal assets: 6,346.1\nAccounts payable: 1,395.7\nTotal current liabilities: 2,159.0\nLong-term debt: 0.0\nTotal liabilities: 2,498.4\nRetained earnings: 2,797.5\nTotal shareholders' equity: 3,390.1\n\nCash flow statement:\nNet cash from operating activities: 749.9\nDepreciation and amortization: 152.8\nCapital expenditure: 109.5\nDividends paid: 193.0\n\nQuestion: What is the asset turnover ratio?",
+   "truth": 1.23,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "KPIT Technologies Limited",
+   "market": "INR",
+   "year": "2023",
+   "user": "KPIT Technologies Limited - financial statements, fiscal year 2023 (INR crores)\n\nIncome statement:\nRevenue: 3,365.0\nCost of revenue: 2,176.5\nGross profit: 1,188.5\nSelling, general and administrative expenses: 330.1\nOperating income: 494.0\nInterest expense: 32.3\nNet income: 381.0\n\nBalance sheet:\nCash and equivalents: 454.2\nAccounts receivable: 592.4\nInventory: 58.8\nTotal current assets: 1,501.6\nProperty, plant and equipment (net): 480.1\nGoodwill: 1,010.3\nTotal assets: 3,400.6\nAccounts payable: 164.3\nTotal current liabilities: 1,168.1\nLong-term debt: 0.2\nTotal liabilities: 1,737.3\nRetained earnings: 1,120.7\nTotal shareholders' equity: 1,651.5\n\nCash flow statement:\nNet cash from operating activities: 462.4\nDepreciation and amortization: 146.4\nCapital expenditure: 129.5\nDividends paid: 89.2\nShare repurchases: 22.8\n\nQuestion: What is the asset turnover ratio?",
+   "truth": 0.99,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "english",
+   "co": "CESC Limited",
+   "market": "INR",
+   "year": "2025",
+   "user": "CESC Limited - financial statements, fiscal year 2025 (INR crores)\n\nIncome statement:\nRevenue: 17,001.3\nCost of revenue: 11,607.7\nGross profit: 5,393.6\nSelling, general and administrative expenses: 30.4\nOperating income: 1,689.2\nInterest expense: 1,437.0\nNet income: 1,369.9\n\nBalance sheet:\nCash and equivalents: 2,181.2\nAccounts receivable: 2,425.3\nInventory: 724.0\nTotal current assets: 8,312.5\nProperty, plant and equipment (net): 23,173.7\nGoodwill: 89.4\nTotal assets: 41,010.3\nAccounts payable: 1,603.2\nTotal current liabilities: 8,527.8\nLong-term debt: 12,853.8\nTotal liabilities: 28,406.8\nRetained earnings: 12,682.4\nTotal shareholders' equity: 12,010.7\n\nCash flow statement:\nNet cash from operating activities: 2,581.4\nDepreciation and amortization: 1,400.8\nCapital expenditure: 1,863.2\nDividends paid: 603.1\n\nQuestion: What is the net debt (INR crores), taking long-term debt less cash?",
+   "truth": 10672.57,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "CESC Limited",
+   "market": "INR",
+   "year": "2026",
+   "user": "CESC Limited - financial statements, fiscal year 2026 (INR crores)\n\nIncome statement:\nRevenue: 18,570.3\nCost of revenue: 12,158.8\nGross profit: 6,411.5\nSelling, general and administrative expenses: 30.3\nOperating income: 2,442.0\nInterest expense: 1,463.0\nNet income: 1,542.0\n\nBalance sheet:\nCash and equivalents: 4,208.3\nAccounts receivable: 2,415.9\nInventory: 697.9\nTotal current assets: 9,744.6\nProperty, plant and equipment (net): 26,272.8\nGoodwill: 89.4\nTotal assets: 46,470.2\nAccounts payable: 1,847.9\nTotal current liabilities: 10,584.0\nLong-term debt: 15,291.7\nTotal liabilities: 33,281.3\nRetained earnings: 13,166.0\nTotal shareholders' equity: 12,530.3\n\nCash flow statement:\nNet cash from operating activities: 4,057.5\nDepreciation and amortization: 1,440.7\nCapital expenditure: 3,916.2\nDividends paid: 803.5\n\nQuestion: ROE (return on equity) kitna hai? Working dikhao.",
+   "truth": 12.3,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "UiPath, Inc.",
+   "market": "USD",
+   "year": "2025",
+   "user": "UiPath, Inc. - financial statements, fiscal year 2025 (USD millions)\n\nIncome statement:\nRevenue: 1,429.7\nCost of revenue: 246.9\nGross profit: 1,182.7\nResearch and development: 380.7\nOperating income: -162.6\nNet income: -73.7\n\nBalance sheet:\nCash and equivalents: 879.2\nAccounts receivable: 451.1\nTotal current assets: 2,338.6\nProperty, plant and equipment (net): 32.7\nGoodwill: 87.3\nTotal assets: 2,865.3\nAccounts payable: 33.2\nTotal current liabilities: 798.9\nTotal liabilities: 1,019.5\nRetained earnings: -1,987.9\nTotal shareholders' equity: 1,845.8\n\nCash flow statement:\nNet cash from operating activities: 320.6\nDepreciation and amortization: 17.2\nCapital expenditure: 14.9\nShare repurchases: 390.8\n\nQuestion: Free cash flow kitna hai? Working ke saath batao.",
+   "truth": 305.64,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Cloudflare, Inc.",
+   "market": "USD",
+   "year": "2025",
+   "user": "Cloudflare, Inc. - financial statements, fiscal year 2025 (USD millions)\n\nIncome statement:\nRevenue: 2,167.9\nCost of revenue: 552.5\nGross profit: 1,615.4\nResearch and development: 512.5\nOperating income: -207.2\nNet income: -102.3\n\nBalance sheet:\nCash and equivalents: 943.5\nAccounts receivable: 382.5\nTotal current assets: 4,644.8\nProperty, plant and equipment (net): 618.7\nGoodwill: 226.6\nTotal assets: 6,036.3\nAccounts payable: 84.1\nTotal current liabilities: 2,350.6\nTotal liabilities: 4,577.1\nRetained earnings: -1,204.9\nTotal shareholders' equity: 1,459.1\n\nCash flow statement:\nNet cash from operating activities: 603.1\nDepreciation and amortization: 189.7\nCapital expenditure: 315.6\nShare repurchases: 0.0\n\nQuestion: Debt-to-equity ratio kitna hai? Working dikhao.",
+   "truth": 3.14,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Gitlab Inc.",
+   "market": "USD",
+   "year": "2025",
+   "user": "Gitlab Inc. - financial statements, fiscal year 2025 (USD millions)\n\nIncome statement:\nRevenue: 759.2\nCost of revenue: 85.1\nGross profit: 674.1\nResearch and development: 239.7\nOperating income: -142.7\nNet income: -6.3\n\nBalance sheet:\nCash and equivalents: 227.6\nAccounts receivable: 264.6\nTotal current assets: 1,336.3\nProperty, plant and equipment (net): 4.0\nGoodwill: 16.1\nTotal assets: 1,399.3\nAccounts payable: 7.5\nTotal current liabilities: 545.0\nTotal liabilities: 578.0\nRetained earnings: -1,167.6\nTotal shareholders' equity: 775.9\n\nCash flow statement:\nNet cash from operating activities: -64.0\nDepreciation and amortization: 2.9\nCapital expenditure: 3.8\n\nQuestion: Is company ka current ratio kitna hai? Formula aur working ke saath batao.",
+   "truth": 2.45,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Twilio Inc.",
+   "market": "USD",
+   "year": "2023",
+   "user": "Twilio Inc. - financial statements, fiscal year 2023 (USD millions)\n\nIncome statement:\nCost of revenue: 2,110.0\nGross profit: 2,043.9\nResearch and development: 942.8\nOperating income: -876.5\nNet income: -1,015.4\n\nBalance sheet:\nCash and equivalents: 655.9\nAccounts receivable: 562.8\nTotal current assets: 4,904.0\nGoodwill: 5,243.3\nTotal assets: 11,609.7\nAccounts payable: 119.6\nTotal current liabilities: 738.3\nLong-term debt: 989.0\nTotal liabilities: 1,877.2\nRetained earnings: -5,066.0\nTotal shareholders' equity: 9,732.6\n\nCash flow statement:\nNet cash from operating activities: 414.8\nDepreciation and amortization: 284.4\nShare repurchases: 668.8\n\nQuestion: ROE (return on equity) kitna hai? Working dikhao.",
+   "truth": -10.4,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Tata Elxsi Limited",
+   "market": "INR",
+   "year": "2026",
+   "user": "Tata Elxsi Limited - financial statements, fiscal year 2026 (INR crores)\n\nIncome statement:\nRevenue: 3,757.4\nCost of revenue: 2,307.8\nGross profit: 1,449.6\nSelling, general and administrative expenses: 211.3\nOperating income: 779.0\nInterest expense: 16.2\nNet income: 628.4\n\nBalance sheet:\nCash and equivalents: 194.1\nAccounts receivable: 889.7\nInventory: 0.0\nTotal current assets: 2,968.1\nProperty, plant and equipment (net): 254.2\nTotal assets: 3,962.5\nAccounts payable: 120.3\nTotal current liabilities: 757.0\nTotal liabilities: 921.2\nRetained earnings: 2,783.0\nTotal shareholders' equity: 3,041.3\n\nCash flow statement:\nNet cash from operating activities: 664.0\nDepreciation and amortization: 93.8\nCapital expenditure: 10.7\nDividends paid: 467.1\n\nQuestion: Free cash flow kitna hai? Working ke saath batao.",
+   "truth": 653.3,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Tata Elxsi Limited",
+   "market": "INR",
+   "year": "2023",
+   "user": "Tata Elxsi Limited - financial statements, fiscal year 2023 (INR crores)\n\nIncome statement:\nRevenue: 3,144.7\nCost of revenue: 1,746.6\nGross profit: 1,398.1\nSelling, general and administrative expenses: 224.2\nOperating income: 888.0\nInterest expense: 16.2\nNet income: 755.2\n\nBalance sheet:\nCash and equivalents: 133.9\nAccounts receivable: 856.7\nInventory: 0.4\nTotal current assets: 2,313.5\nProperty, plant and equipment (net): 324.4\nTotal assets: 2,763.5\nAccounts payable: 103.2\nTotal current liabilities: 478.6\nTotal liabilities: 677.7\nRetained earnings: 1,927.5\nTotal shareholders' equity: 2,085.8\n\nCash flow statement:\nNet cash from operating activities: 486.9\nDepreciation and amortization: 81.4\nCapital expenditure: 64.1\nDividends paid: 264.7\n\nQuestion: Gross margin kitna hai? Working ke saath batao.",
+   "truth": 44.5,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "UiPath, Inc.",
+   "market": "USD",
+   "year": "2026",
+   "user": "UiPath, Inc. - financial statements, fiscal year 2026 (USD millions)\n\nIncome statement:\nRevenue: 1,610.6\nCost of revenue: 271.0\nGross profit: 1,339.6\nResearch and development: 385.2\nOperating income: 56.8\nNet income: 282.3\n\nBalance sheet:\nCash and equivalents: 871.2\nAccounts receivable: 488.3\nTotal current assets: 2,243.9\nProperty, plant and equipment (net): 46.0\nGoodwill: 125.3\nTotal assets: 3,179.2\nAccounts payable: 10.2\nTotal current liabilities: 905.4\nTotal liabilities: 1,096.6\nRetained earnings: -1,705.5\nTotal shareholders' equity: 2,082.6\n\nCash flow statement:\nNet cash from operating activities: 371.2\nDepreciation and amortization: 17.0\nCapital expenditure: 19.0\nShare repurchases: 329.1\n\nQuestion: Free cash flow kitna hai? Working ke saath batao.",
+   "truth": 352.16,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Central Depository Services (India) Limited",
+   "market": "INR",
+   "year": "2026",
+   "user": "Central Depository Services (India) Limited - financial statements, fiscal year 2026 (INR crores)\n\nIncome statement:\nRevenue: 1,144.9\nCost of revenue: 332.7\nGross profit: 812.2\nSelling, general and administrative expenses: 42.0\nOperating income: 521.8\nInterest expense: 0.2\nNet income: 456.1\n\nBalance sheet:\nCash and equivalents: 37.8\nAccounts receivable: 30.7\nTotal current assets: 1,082.1\nProperty, plant and equipment (net): 469.2\nTotal assets: 2,419.0\nAccounts payable: 52.2\nTotal current liabilities: 370.9\nTotal liabilities: 416.8\nTotal shareholders' equity: 1,959.8\n\nCash flow statement:\nNet cash from operating activities: 466.6\nDepreciation and amortization: 66.2\nCapital expenditure: 120.7\nDividends paid: 261.2\n\nQuestion: Is company ka current ratio kitna hai? Formula aur working ke saath batao.",
+   "truth": 2.92,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Persistent Systems Limited",
+   "market": "INR",
+   "year": "2026",
+   "user": "Persistent Systems Limited - financial statements, fiscal year 2026 (INR crores)\n\nIncome statement:\nRevenue: 14,748.4\nCost of revenue: 10,611.5\nGross profit: 4,136.9\nSelling, general and administrative expenses: 248.7\nOperating income: 2,414.0\nInterest expense: 72.7\nNet income: 1,865.1\n\nBalance sheet:\nCash and equivalents: 1,074.9\nAccounts receivable: 2,133.2\nTotal current assets: 7,097.3\nProperty, plant and equipment (net): 957.6\nGoodwill: 1,359.7\nTotal assets: 11,376.5\nAccounts payable: 1,134.2\nTotal current liabilities: 2,924.3\nTotal liabilities: 3,538.7\nRetained earnings: 4,182.7\nTotal shareholders' equity: 7,837.9\n\nCash flow statement:\nNet cash from operating activities: 1,767.1\nDepreciation and amortization: 402.9\nCapital expenditure: 208.6\nDividends paid: 579.0\nShare repurchases: 204.9\n\nQuestion: Is company ka current ratio kitna hai? Formula aur working ke saath batao.",
+   "truth": 2.43,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Roblox Corporation",
+   "market": "USD",
+   "year": "2025",
+   "user": "Roblox Corporation - financial statements, fiscal year 2025 (USD millions)\n\nIncome statement:\nResearch and development: 1,567.7\nOperating income: -1,232.3\nNet income: -1,065.1\n\nBalance sheet:\nCash and equivalents: 1,205.3\nAccounts receivable: 900.6\nTotal current assets: 4,898.0\nProperty, plant and equipment (net): 884.8\nGoodwill: 142.6\nTotal assets: 9,557.1\nAccounts payable: 64.9\nTotal current liabilities: 5,126.4\nLong-term debt: 993.1\nTotal liabilities: 9,182.1\nRetained earnings: -5,060.7\nTotal shareholders' equity: 394.5\n\nCash flow statement:\nNet cash from operating activities: 1,796.4\nDepreciation and amortization: 225.8\nCapital expenditure: 441.0\n\nQuestion: Is company ka current ratio kitna hai? Formula aur working ke saath batao.",
+   "truth": 0.96,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Hims & Hers Health, Inc.",
+   "market": "USD",
+   "year": "2023",
+   "user": "Hims & Hers Health, Inc. - financial statements, fiscal year 2023 (USD millions)\n\nIncome statement:\nRevenue: 872.0\nCost of revenue: 157.1\nGross profit: 714.9\nOperating income: -29.5\nNet income: -23.5\n\nBalance sheet:\nCash and equivalents: 96.7\nAccounts receivable: 6.7\nInventory: 22.5\nTotal current assets: 265.1\nGoodwill: 110.9\nTotal assets: 441.2\nAccounts payable: 43.1\nTotal current liabilities: 88.5\nTotal liabilities: 97.2\nRetained earnings: -368.2\nTotal shareholders' equity: 344.0\n\nCash flow statement:\nNet cash from operating activities: 73.5\nDepreciation and amortization: 9.5\nCapital expenditure: 26.5\nShare repurchases: 2.0\n\nQuestion: Operating margin kitna hai? Working ke saath batao.",
+   "truth": -3.4,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Hims & Hers Health, Inc.",
+   "market": "USD",
+   "year": "2025",
+   "user": "Hims & Hers Health, Inc. - financial statements, fiscal year 2025 (USD millions)\n\nIncome statement:\nRevenue: 2,347.6\nCost of revenue: 614.3\nGross profit: 1,733.4\nOperating income: 105.6\nNet income: 128.4\n\nBalance sheet:\nCash and equivalents: 228.6\nAccounts receivable: 32.1\nInventory: 80.1\nTotal current assets: 767.6\nGoodwill: 278.3\nTotal assets: 2,154.7\nAccounts payable: 143.3\nTotal current liabilities: 404.4\nTotal liabilities: 1,613.8\nRetained earnings: -113.8\nTotal shareholders' equity: 540.9\n\nCash flow statement:\nNet cash from operating activities: 300.0\nDepreciation and amortization: 54.5\nCapital expenditure: 242.6\nShare repurchases: 90.0\n\nQuestion: Operating margin kitna hai? Working ke saath batao.",
+   "truth": 4.5,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Mazagon Dock Shipbuilders Limited",
+   "market": "INR",
+   "year": "2023",
+   "user": "Mazagon Dock Shipbuilders Limited - financial statements, fiscal year 2023 (INR crores)\n\nIncome statement:\nRevenue: 7,584.0\nCost of revenue: 5,614.6\nGross profit: 1,969.4\nSelling, general and administrative expenses: 246.4\nOperating income: 727.0\nInterest expense: 9.0\nNet income: 1,119.0\n\nBalance sheet:\nCash and equivalents: 1,868.4\nAccounts receivable: 1,002.3\nInventory: 7,356.9\nTotal current assets: 26,085.2\nProperty, plant and equipment (net): 1,068.5\nTotal assets: 29,463.2\nAccounts payable: 4,463.4\nTotal current liabilities: 24,139.8\nTotal liabilities: 24,703.0\nRetained earnings: 2,165.6\nTotal shareholders' equity: 4,760.2\n\nCash flow statement:\nNet cash from operating activities: 1,515.6\nDepreciation and amortization: 75.6\nCapital expenditure: 135.6\nDividends paid: 216.4\n\nQuestion: Is company ka current ratio kitna hai? Formula aur working ke saath batao.",
+   "truth": 1.08,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Twilio Inc.",
+   "market": "USD",
+   "year": "2023",
+   "user": "Twilio Inc. - financial statements, fiscal year 2023 (USD millions)\n\nIncome statement:\nCost of revenue: 2,110.0\nGross profit: 2,043.9\nResearch and development: 942.8\nOperating income: -876.5\nNet income: -1,015.4\n\nBalance sheet:\nCash and equivalents: 655.9\nAccounts receivable: 562.8\nTotal current assets: 4,904.0\nGoodwill: 5,243.3\nTotal assets: 11,609.7\nAccounts payable: 119.6\nTotal current liabilities: 738.3\nLong-term debt: 989.0\nTotal liabilities: 1,877.2\nRetained earnings: -5,066.0\nTotal shareholders' equity: 9,732.6\n\nCash flow statement:\nNet cash from operating activities: 414.8\nDepreciation and amortization: 284.4\nShare repurchases: 668.8\n\nQuestion: Debt-to-equity ratio kitna hai? Working dikhao.",
+   "truth": 0.19,
+   "pct": false
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Hims & Hers Health, Inc.",
+   "market": "USD",
+   "year": "2022",
+   "user": "Hims & Hers Health, Inc. - financial statements, fiscal year 2022 (USD millions)\n\nIncome statement:\nRevenue: 526.9\nCost of revenue: 118.2\nGross profit: 408.7\nOperating income: -68.7\nNet income: -65.7\n\nBalance sheet:\nCash and equivalents: 46.8\nAccounts receivable: 3.9\nInventory: 21.6\nTotal current assets: 216.6\nProperty, plant and equipment (net): 3.0\nGoodwill: 110.9\nTotal assets: 366.3\nAccounts payable: 32.4\nTotal current liabilities: 47.9\nTotal liabilities: 54.6\nRetained earnings: -344.6\nTotal shareholders' equity: 311.7\n\nCash flow statement:\nNet cash from operating activities: -26.5\nDepreciation and amortization: 7.5\nCapital expenditure: 7.2\nShare repurchases: 0.0\n\nQuestion: ROA (return on assets) kitna hai? Working dikhao.",
+   "truth": -17.9,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Affirm Holdings, Inc.",
+   "market": "USD",
+   "year": "2026",
+   "user": "Affirm Holdings, Inc. - financial statements, fiscal year 2026 (USD millions)\n\nIncome statement:\nRevenue: 4,261.1\nOperating income: 417.0\nNet income: 1,929.8\n\nBalance sheet:\nCash and equivalents: 1,630.0\nProperty, plant and equipment (net): 685.8\nGoodwill: 524.5\nTotal assets: 15,790.1\nLong-term debt: 9,794.1\nTotal liabilities: 10,306.3\nRetained earnings: -1,127.0\nTotal shareholders' equity: 5,483.8\n\nCash flow statement:\nNet cash from operating activities: 1,231.0\nDepreciation and amortization: 303.3\nCapital expenditure: 238.3\nShare repurchases: 0.0\n\nQuestion: Operating margin kitna hai? Working ke saath batao.",
+   "truth": 9.8,
+   "pct": true
+  },
+  {
+   "type": "stmt",
+   "lang": "hinglish",
+   "co": "Mazagon Dock Shipbuilders Limited",
+   "market": "INR",
+   "year": "2023",
+   "user": "Mazagon Dock Shipbuilders Limited - financial statements, fiscal year 2023 (INR crores)\n\nIncome statement:\nRevenue: 7,584.0\nCost of revenue: 5,614.6\nGross profit: 1,969.4\nSelling, general and administrative expenses: 246.4\nOperating income: 727.0\nInterest expense: 9.0\nNet income: 1,119.0\n\nBalance sheet:\nCash and equivalents: 1,868.4\nAccounts receivable: 1,002.3\nInventory: 7,356.9\nTotal current assets: 26,085.2\nProperty, plant and equipment (net): 1,068.5\nTotal assets: 29,463.2\nAccounts payable: 4,463.4\nTotal current liabilities: 24,139.8\nTotal liabilities: 24,703.0\nRetained earnings: 2,165.6\nTotal shareholders' equity: 4,760.2\n\nCash flow statement:\nNet cash from operating activities: 1,515.6\nDepreciation and amortization: 75.6\nCapital expenditure: 135.6\nDividends paid: 216.4\n\nQuestion: Debt-to-equity ratio kitna hai? Working dikhao.",
+   "truth": 5.19,
+   "pct": false
+  }
+ ]
+}
