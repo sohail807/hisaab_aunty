@@ -175,6 +175,7 @@ Other locations:
 - llama.cpp binaries (CPU, build b11580): `C:\Users\MohammedSohail\Downloads\llama-b11580-bin-win-cpu-x64\llama-server.exe`.
 - llama.cpp source with the converter and its Python virtual environment: `C:\Users\MohammedSohail\Documents\llama.cpp-src\` (`convert_hf_to_gguf.py`, `.venv`).
 - Drive training folders, under `Hisaab_work/` in My Drive: `mix` (round-1 data, old), `mix_finance` (round-2 training data and `sources.json`, `summary.txt`), `checkpoints_finance` (checkpoints; the last ones are kept), `fin_data` (the built company-statement data). Drive folder ids found by search: `Hisaab_work` 1tuvF5Cq4uY8M7Z9LWm185g8H-qUMBeyD, `mix_finance` 1UgrdpMjH-4uMS1d0kvXGPsrwLH0tJR_u, `checkpoints_finance` 1FE3fmXkLHIJNqzPmDSgRcwIl46ZLf3UR.
+- Drive model folders (ids): `Sent_model_finance` 1jBh0BkHf10Jw4IDEcs_qCmn7ebIenpH2 (https://drive.google.com/drive/folders/1jBh0BkHf10Jw4IDEcs_qCmn7ebIenpH2), `Sent_model_hinglish` 17TlVSE_CRzY9t5Lcb5A2WDdHfpMb5jcl, `Sent_model` 12xB5jTJwafG6LVc9z0LGPCCKrOJbkOW4. All three sit directly in My Drive.
 - Drive notebooks: `Hisaab_Aunty_train_FINAL.ipynb` is the owner's own copy used for round 1 (do not touch). Old ones were renamed `OLD_train_colab_DO_NOT_USE*.ipynb`.
 - Do not copy, read or rename the big model files unless asked. Conversions read them but write only new files.
 
